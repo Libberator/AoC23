@@ -23,7 +23,7 @@ public class Day1(ILogger logger, string path) : Puzzle(logger, path)
 
         _logger.Log(total);
     }
-    
+
     private static int FirstDigit(string line)
     {
         for (int i = 0; i < line.Length; i++)
@@ -49,7 +49,7 @@ public class Day1(ILogger logger, string path) : Puzzle(logger, path)
         int total = 0;
         foreach (var line in ReadFromFile())
             total += 10 * FirstNumber(line) + LastNumber(line);
-        
+
         _logger.Log(total);
     }
 
