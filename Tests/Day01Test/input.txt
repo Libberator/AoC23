@@ -1,1 +1,7 @@
-﻿Replace this with the test input data provided from AoC. Can usually be found in a code-block in the puzzle's prompt.
+﻿two1nine
+eightwothree
+abcone2threexyz
+xtwone3four
+4nineeightseven2
+zoneight234
+7pqrstsixteen

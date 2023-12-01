@@ -1,10 +1,10 @@
-﻿#define USE_STOPWATCH
+﻿//#define USE_STOPWATCH
 using AoC;
 using System;
 using System.Diagnostics;
 
 const int START_DAY = 1;
-const int STOP_DAY = 25;
+const int STOP_DAY = 2;
 
 ILogger logger = new ConsoleLogger();
 
