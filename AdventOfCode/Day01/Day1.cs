@@ -8,12 +8,10 @@ public class Day1(ILogger logger, string path) : Puzzle(logger, path)
     private const char ZERO = '0';
     private static readonly Dictionary<string, int> _numbers = new()
     {
-        { "one", 1 }, { "two", 2 }, { "three",  3 },
-        { "four", 4 }, { "five", 5 }, { "six", 6 },
-        { "seven", 7 }, { "eight", 8 }, {"nine", 9 }
+        ["one"] = 1, ["two"] = 2, ["three"] =  3,
+        ["four"] = 4, ["five"] = 5, ["six"] = 6,
+        ["seven"] = 7, ["eight"] = 8, ["nine"] = 9
     };
-
-    public override void Setup() { }
 
     public override void SolvePart1()
     {

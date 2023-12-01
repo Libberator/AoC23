@@ -6,16 +6,9 @@ namespace System.Numerics;
 /// <summary>
 /// Created this to be useful for 3D Grids, when floating point arithmetic could be a bad idea
 /// </summary>
-public struct Vector3Int
+public struct Vector3Int(int x, int y, int z)
 {
-    public int X, Y, Z;
-
-    public Vector3Int(int x, int y, int z)
-    {
-        X = x;
-        Y = y;
-        Z = z;
-    }
+    public int X = x, Y = y, Z = z;
 
     #region Static Properties
 
