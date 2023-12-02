@@ -6,9 +6,7 @@ namespace AoC;
 
 public class Day2(ILogger logger, string path) : Puzzle(logger, path)
 {
-    private const string RED = "red";
-    private const string GREEN = "green";
-    private const string BLUE = "blue";
+    private const string RED = "red", GREEN = "green", BLUE = "blue";
     private const int MAX_RED = 12, MAX_GREEN = 13, MAX_BLUE = 14;
 
     private readonly List<Game> _games = new();
