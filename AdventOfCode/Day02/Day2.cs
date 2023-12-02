@@ -17,19 +17,16 @@ public class Day2(ILogger logger, string path) : Puzzle(logger, path)
     {
         foreach (var line in ReadAllLines())
         {
-            var gameSplit = line.Split(':');
-            var gameID = int.Parse(gameSplit[0].Split(' ')[1]);
+            var lineSplit = line.Split(':');
+            var gameID = int.Parse(lineSplit[0].Split(' ')[1]);
             var game = new Game(gameID);
 
-            var setSplit = gameSplit[1].Split(';', StringSplitOptions.TrimEntries);
-            foreach (var setText in setSplit)
+            foreach (var setText in lineSplit[1].Split(';'))
             {
                 var set = new Set();
-                
-                var revealed = setText.Split(',', StringSplitOptions.TrimEntries);
-                foreach (var reveal in revealed)
+                foreach (var revealed in setText.Split(',', StringSplitOptions.TrimEntries))
                 {
-                    var draws = reveal.Split(' ', StringSplitOptions.TrimEntries);
+                    var draws = revealed.Split(' ', StringSplitOptions.TrimEntries);
                     var amount = int.Parse(draws[0]);
                     switch (draws[1])
                     {
@@ -46,18 +43,9 @@ public class Day2(ILogger logger, string path) : Puzzle(logger, path)
         }
     }
 
-    public override void SolvePart1()
-    {
-        int totalIDs = 0;
+    public override void SolvePart1() => _logger.Log(_games.Sum(g => IsPossible(g) ? g.ID : 0));
 
-        foreach (var game in _games)
-        {
-            if (IsPossible(game))
-                totalIDs += game.ID;
-        }
-
-        _logger.Log(totalIDs);
-    }
+    public override void SolvePart2() => _logger.Log(_games.Sum(g => g.Power));
 
     private static bool IsPossible(Game game)
     {
@@ -70,17 +58,12 @@ public class Day2(ILogger logger, string path) : Puzzle(logger, path)
         return true;
     }
 
-    public override void SolvePart2()
-    {
-        _logger.Log(_games.Sum(g => g.Power));
-    }
-
     private static void CalculatePower(Game game)
     {
-        int max_red = game.Sets.Max(s => s.Red);
-        int max_green = game.Sets.Max(s => s.Green);
-        int max_blue = game.Sets.Max(s => s.Blue);
-        game.Power = max_red * max_green * max_blue;
+        int maxRed = game.Sets.Max(s => s.Red);
+        int maxGreen = game.Sets.Max(s => s.Green);
+        int maxBlue = game.Sets.Max(s => s.Blue);
+        game.Power = maxRed * maxGreen * maxBlue;
     }
 
     private class Game(int id)
