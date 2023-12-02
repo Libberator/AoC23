@@ -20,57 +20,61 @@ public class Day2(ILogger logger, string path) : Puzzle(logger, path)
             var lineSplit = line.Split(':');
             var gameID = int.Parse(lineSplit[0].Split(' ')[1]);
             var game = new Game(gameID);
-
-            foreach (var setText in lineSplit[1].Split(';'))
-            {
-                var set = new Set();
-                foreach (var revealed in setText.Split(',', StringSplitOptions.TrimEntries))
-                {
-                    var draws = revealed.Split(' ', StringSplitOptions.TrimEntries);
-                    var amount = int.Parse(draws[0]);
-                    switch (draws[1])
-                    {
-                        case RED: set.Red = amount; break;
-                        case GREEN: set.Green = amount; break;
-                        case BLUE: set.Blue = amount; break;
-                        default: break;
-                    }
-                }
-                game.Sets.Add(set);
-            }
-            CalculatePower(game);
+            ParseSets(lineSplit[1].Split(';'), game);
+            game.CalculatePower();
             _games.Add(game);
         }
     }
 
-    public override void SolvePart1() => _logger.Log(_games.Sum(g => IsPossible(g) ? g.ID : 0));
+    private static void ParseSets(string[] sets, Game game)
+    {
+        foreach (var setText in sets)
+        {
+            var set = new Set();
+            foreach (var revealed in setText.Split(',', StringSplitOptions.TrimEntries))
+            {
+                var draws = revealed.Split(' ', StringSplitOptions.TrimEntries);
+                var amount = int.Parse(draws[0]);
+                switch (draws[1])
+                {
+                    case RED: set.Red = amount; break;
+                    case GREEN: set.Green = amount; break;
+                    case BLUE: set.Blue = amount; break;
+                    default: break;
+                }
+            }
+            game.Sets.Add(set);
+        }
+    }
+
+    public override void SolvePart1() => _logger.Log(_games.Sum(g => g.IsPossible() ? g.ID : 0));
 
     public override void SolvePart2() => _logger.Log(_games.Sum(g => g.Power));
-
-    private static bool IsPossible(Game game)
-    {
-        foreach (var set in game.Sets)
-        {
-            if (set.Red > MAX_RED) return false;
-            if (set.Green > MAX_GREEN) return false;
-            if (set.Blue > MAX_BLUE) return false;
-        }
-        return true;
-    }
-
-    private static void CalculatePower(Game game)
-    {
-        int maxRed = game.Sets.Max(s => s.Red);
-        int maxGreen = game.Sets.Max(s => s.Green);
-        int maxBlue = game.Sets.Max(s => s.Blue);
-        game.Power = maxRed * maxGreen * maxBlue;
-    }
 
     private class Game(int id)
     {
         public readonly int ID = id;
-        public int Power;
         public readonly List<Set> Sets = new();
+        public int Power;
+
+        public void CalculatePower()
+        {
+            int maxRed = Sets.Max(s => s.Red);
+            int maxGreen = Sets.Max(s => s.Green);
+            int maxBlue = Sets.Max(s => s.Blue);
+            Power = maxRed * maxGreen * maxBlue;
+        }
+
+        public bool IsPossible()
+        {
+            foreach (var set in Sets)
+            {
+                if (set.Red > MAX_RED) return false;
+                if (set.Green > MAX_GREEN) return false;
+                if (set.Blue > MAX_BLUE) return false;
+            }
+            return true;
+        }
     }
 
     private class Set(int red = 0, int green = 0, int blue = 0)
