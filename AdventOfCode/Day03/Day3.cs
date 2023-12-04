@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -22,7 +21,6 @@ public class Day3(ILogger logger, string path) : Puzzle(logger, path)
             for (int col = 0; col < cols; col++)
             {
                 if (!char.IsDigit(line[col])) continue;
-                
                 var number = GetNumber(data, line, row, ref col);
                 _numbers.Add(number);
             }
@@ -31,35 +29,28 @@ public class Day3(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart1() => _logger.Log(_numbers.Sum(n => n.IsAdjacentToSymbol ? n.Value : 0));
 
-    public override void SolvePart2() => _logger.Log(_gears.Sum(g => g.Value));
+    public override void SolvePart2() => _logger.Log(_gears.Sum(g => g.Ratio));
 
     private Number GetNumber(string[] data, string line, int row, ref int col)
     {
         var c = line[col];
         var number = new Number(c - '0');
-        if (IsAdjacentToSymbol(data, number, row, col))
-            number.IsAdjacentToSymbol = true;
+        CheckSymbolAdjacency(data, number, row, col);
 
-        do
+        while (++col < line.Length)
         {
-            col++;
-            if (col == line.Length) break;
-            
             c = line[col];
             if (!char.IsDigit(c)) break;
             
             number.AppendDigit(c - '0');
-            if (!number.IsAdjacentToSymbol && IsAdjacentToSymbol(data, number, row, col))
-            {
-                number.IsAdjacentToSymbol = true;
-            }
+            if (!number.IsAdjacentToSymbol)
+                CheckSymbolAdjacency(data, number, row, col);
         }
-        while (col < line.Length);
 
         return number;
     }
 
-    private bool IsAdjacentToSymbol(string[] data, Number number, int row, int col)
+    private void CheckSymbolAdjacency(string[] data, Number number, int row, int col)
     {
         for (int y = -1; y <= 1; y++)
         {
@@ -67,26 +58,25 @@ public class Day3(ILogger logger, string path) : Puzzle(logger, path)
             var line = data[row + y];
             for (int x = -1; x <= 1; x++)
             {
-                if (col + x < 0 || col + x >= line.Length) continue;
+                if ((col == 0 && y == 0) || col + x < 0 || col + x >= line.Length) continue;
                 var c = line[col + x];
-                if (!char.IsDigit(c) && c != '.')
-                {
-                    if (c == '*')
-                    {
-                        var pos = new Vector2Int(row + y, col + x);
-                        var gear = _gears.Find(g => g.Pos == pos);
-                        if (gear == null)
-                        {
-                            gear = new Gear(pos);
-                            _gears.Add(gear);
-                        }
-                        gear.AdjacentNumbers.Add(number);
-                    }
-                    return true;
-                }
+                if (char.IsDigit(c) || c == '.') continue;
+                
+                if (c == '*') 
+                    AddNumberToGear(number, new Vector2Int(row + y, col + x));
+                
+                number.IsAdjacentToSymbol = true;
+                return;
             }
         }
-        return false;
+    }
+
+    private void AddNumberToGear(Number number, Vector2Int pos)
+    {
+        var gear = _gears.Find(g => g.Pos == pos);
+        if (gear == null)
+            _gears.Add(gear = new Gear(pos));
+        gear.AdjacentNumbers.Add(number);
     }
 
     public class Number(int value)
@@ -100,9 +90,8 @@ public class Day3(ILogger logger, string path) : Puzzle(logger, path)
     public class Gear(Vector2Int pos)
     {
         public Vector2Int Pos = pos;
-
-        public int Value => AdjacentNumbers.Count == 2 ? AdjacentNumbers.Select(n => n.Value).Product(): 0;
-
         public readonly List<Number> AdjacentNumbers = new();
+
+        public int Ratio => AdjacentNumbers.Count == 2 ? AdjacentNumbers.Select(n => n.Value).Product() : 0;
     }
 }
