@@ -41,7 +41,7 @@ public class Day3(ILogger logger, string path) : Puzzle(logger, path)
         {
             c = line[col];
             if (!char.IsDigit(c)) break;
-            
+
             number.AppendDigit(c - '0');
             if (!number.IsAdjacentToSymbol)
                 CheckSymbolAdjacency(data, number, row, col);
@@ -61,11 +61,11 @@ public class Day3(ILogger logger, string path) : Puzzle(logger, path)
                 if ((col == 0 && y == 0) || col + x < 0 || col + x >= line.Length) continue;
                 var c = line[col + x];
                 if (char.IsDigit(c) || c == '.') continue;
-                
-                if (c == '*') 
-                    AddNumberToGear(number, new Vector2Int(row + y, col + x));
-                
+
                 number.IsAdjacentToSymbol = true;
+                if (c == '*')
+                    AddNumberToGear(number, new Vector2Int(row + y, col + x));
+
                 return;
             }
         }
