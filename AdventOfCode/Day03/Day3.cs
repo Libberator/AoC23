@@ -1,19 +1,108 @@
-﻿namespace AoC;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+
+namespace AoC;
 
 public class Day3(ILogger logger, string path) : Puzzle(logger, path)
 {
+    private readonly List<Number> _numbers = new();
+    private readonly List<Gear> _gears = new();
+
     public override void Setup()
     {
-        // Access file with ReadFromFile() for 1 line at a time or ReadAllLines() as a string dump
+        var data = ReadAllLines();
+        var rows = data.Length;
+        var cols = data[0].Length;
+
+        for (int row = 0; row < rows; row++)
+        {
+            var line = data[row];
+            for (int col = 0; col < cols; col++)
+            {
+                if (!char.IsDigit(line[col])) continue;
+                
+                var number = GetNumber(data, line, row, ref col);
+                _numbers.Add(number);
+            }
+        }
     }
 
-    public override void SolvePart1()
+    public override void SolvePart1() => _logger.Log(_numbers.Sum(n => n.IsAdjacentToSymbol ? n.Value : 0));
+
+    public override void SolvePart2() => _logger.Log(_gears.Sum(g => g.Value));
+
+    private Number GetNumber(string[] data, string line, int row, ref int col)
     {
-        _logger.Log("Part 1 Answer");
+        var c = line[col];
+        var number = new Number(c - '0');
+        if (IsAdjacentToSymbol(data, number, row, col))
+            number.IsAdjacentToSymbol = true;
+
+        do
+        {
+            col++;
+            if (col == line.Length) break;
+            
+            c = line[col];
+            if (!char.IsDigit(c)) break;
+            
+            number.AppendDigit(c - '0');
+            if (!number.IsAdjacentToSymbol && IsAdjacentToSymbol(data, number, row, col))
+            {
+                number.IsAdjacentToSymbol = true;
+            }
+        }
+        while (col < line.Length);
+
+        return number;
     }
 
-    public override void SolvePart2()
+    private bool IsAdjacentToSymbol(string[] data, Number number, int row, int col)
     {
-        _logger.Log("Part 2 Answer");
+        for (int y = -1; y <= 1; y++)
+        {
+            if (row + y < 0 || row + y >= data.Length) continue;
+            var line = data[row + y];
+            for (int x = -1; x <= 1; x++)
+            {
+                if (col + x < 0 || col + x >= line.Length) continue;
+                var c = line[col + x];
+                if (!char.IsDigit(c) && c != '.')
+                {
+                    if (c == '*')
+                    {
+                        var pos = new Vector2Int(row + y, col + x);
+                        var gear = _gears.Find(g => g.Pos == pos);
+                        if (gear == null)
+                        {
+                            gear = new Gear(pos);
+                            _gears.Add(gear);
+                        }
+                        gear.AdjacentNumbers.Add(number);
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public class Number(int value)
+    {
+        public int Value = value;
+        public bool IsAdjacentToSymbol = false;
+
+        public void AppendDigit(int digit) => Value = (10 * Value) + digit;
+    }
+
+    public class Gear(Vector2Int pos)
+    {
+        public Vector2Int Pos = pos;
+
+        public int Value => AdjacentNumbers.Count == 2 ? AdjacentNumbers.Select(n => n.Value).Product(): 0;
+
+        public readonly List<Number> AdjacentNumbers = new();
     }
 }
