@@ -13,7 +13,7 @@ public class Day2(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void Setup()
     {
-        foreach (var line in ReadAllLines())
+        foreach (var line in ReadFromFile())
         {
             var lineSplit = line.Split(':');
             var gameID = int.Parse(lineSplit[0].Split(' ')[1]);

@@ -12,7 +12,7 @@ public class Day4(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void Setup()
     {
-        foreach (var line in ReadAllLines())
+        foreach (var line in ReadFromFile())
         {
             var matches = Regex.Match(line, @"Card\s+(\d+):(.+)\|(.+)");
             var winningNumbers = matches.Groups[2].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToIntArray();
