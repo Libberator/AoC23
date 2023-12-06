@@ -1,4 +1,4 @@
-﻿//#define USE_STOPWATCH
+﻿#define USE_STOPWATCH
 using AoC;
 using System;
 using System.Diagnostics;
