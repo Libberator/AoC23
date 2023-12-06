@@ -12,8 +12,8 @@ public class Day6(ILogger logger, string path) : Puzzle(logger, path)
     public override void Setup()
     {
         var data = ReadAllLines();
-        var times = Regex.Matches(data[0], @"(\d+)");
-        var dists = Regex.Matches(data[1], @"(\d+)");
+        var times = Regex.Matches(data[0], @"\d+");
+        var dists = Regex.Matches(data[1], @"\d+");
         _times = times.Select(m => int.Parse(m.Value)).ToArray();
         _distances = dists.Select(m => long.Parse(m.Value)).ToArray();
     }
