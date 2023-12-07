@@ -3,8 +3,8 @@ using AoC;
 using System;
 using System.Diagnostics;
 
-const int START_DAY = 6;
-const int STOP_DAY = 6;
+const int START_DAY = 7;
+const int STOP_DAY = 7;
 
 ILogger logger = new ConsoleLogger();
 
