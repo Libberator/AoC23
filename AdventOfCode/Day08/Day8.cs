@@ -2,9 +2,14 @@
 
 public class Day8(ILogger logger, string path) : Puzzle(logger, path)
 {
+
+
     public override void Setup()
     {
-        // Access file with ReadFromFile() for 1 line at a time or ReadAllLines() as a string dump
+        foreach (var line in ReadFromFile())
+        {
+
+        }
     }
 
     public override void SolvePart1()
