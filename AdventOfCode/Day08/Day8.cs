@@ -16,7 +16,7 @@ public class Day8(ILogger logger, string path) : Puzzle(logger, path)
         foreach (var line in ReadFromFile(ignoreWhiteSpace: true).Skip(1))
         {
             var match = Regex.Match(line, @"(.+)\s=\s\((.+),\s(.+)\)");
-            _stepsMap.Add(match.Groups[1].Value, [match.Groups[2].Value, match.Groups[3].Value]);
+            _stepsMap[match.Groups[1].Value] = [match.Groups[2].Value, match.Groups[3].Value];
         }
     }
 
@@ -46,7 +46,7 @@ public class Day8(ILogger logger, string path) : Puzzle(logger, path)
         int[] firstOccurances = new int[current.Count];
         long[] periodicity = new long[current.Count]; // steps between each cyclical END-occurance
 
-        while (periodicity.Any(f => f == 0))
+        while (periodicity.Any(p => p == 0))
         {
             int direction = _directions[steps++ % _directions.Length] == 'L' ? 0 : 1;
 
@@ -56,11 +56,8 @@ public class Day8(ILogger logger, string path) : Puzzle(logger, path)
                 if (current[i][^1] == 'Z') // at an END node
                 {
                     if (firstOccurances[i] == 0)
-                    {
                         firstOccurances[i] = steps;
-                        continue;
-                    }
-                    if (periodicity[i] == 0)
+                    else if (periodicity[i] == 0)
                         periodicity[i] = steps - firstOccurances[i];
                 }
             }
