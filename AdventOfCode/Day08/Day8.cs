@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -35,9 +34,7 @@ public class Day8(ILogger logger, string path) : Puzzle(logger, path)
         int steps = 0;
         while (current != END)
         {
-            int direction = _directions[steps % _directions.Length] == 'L' ? 0 : 1;
-            steps++;
-
+            int direction = _directions[steps++ % _directions.Length] == 'L' ? 0 : 1;
             current = _stepsMap[current][direction];
         }
         return steps;
@@ -47,31 +44,28 @@ public class Day8(ILogger logger, string path) : Puzzle(logger, path)
     {
         int steps = 0;
         int[] firstOccurances = new int[current.Count];
-        int[] frequencies = new int[current.Count];
+        long[] periodicity = new long[current.Count]; // steps between each cyclical END-occurance
 
-        while (frequencies.Any(f => f == 0))
+        while (periodicity.Any(f => f == 0))
         {
-            int direction = _directions[steps % _directions.Length] == 'L' ? 0 : 1;
-            steps++;
+            int direction = _directions[steps++ % _directions.Length] == 'L' ? 0 : 1;
 
             for (int i = 0; i < current.Count; i++)
             {
                 current[i] = _stepsMap[current[i]][direction];
-                if (current[i][^1] == 'Z')
+                if (current[i][^1] == 'Z') // at an END node
                 {
                     if (firstOccurances[i] == 0)
                     {
                         firstOccurances[i] = steps;
                         continue;
                     }
-                    if (frequencies[i] == 0)
-                        frequencies[i] = steps - firstOccurances[i];
+                    if (periodicity[i] == 0)
+                        periodicity[i] = steps - firstOccurances[i];
                 }
             }
         }
 
-        var primeFactors = frequencies.Select(f => f.FirstPrimeFactor());
-        long result = frequencies[0] / frequencies[0].FirstPrimeFactor(); // start with 2nd prime factor
-        return primeFactors.Aggregate(result, (result, pf) => result *= pf);
+        return periodicity.Aggregate(1L, (a, b) => a = Utils.LeastCommonMultiple(a, b));
     }
 }
