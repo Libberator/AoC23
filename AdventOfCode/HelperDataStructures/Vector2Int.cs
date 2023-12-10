@@ -134,9 +134,9 @@ public struct Vector2Int : IEquatable<Vector2Int>, IFormattable
     /// <summary>Negates this vector.</summary>
     public void Negate() { X = -X; Y = -Y; }
     /// <summary>Rotates this vector clockwise 90° from the perspective of the standard XY grid.</summary>
-    public void RotateRight() { (X, Y) = (Y, -X); }
+    public readonly Vector2Int RotateRight() => new(Y, -X);
     /// <summary>Rotates this vector counter-clockwise 90° from the perspective of the standard XY grid.</summary>
-    public void RotateLeft() { (X, Y) = (-Y, X); }
+    public readonly Vector2Int RotateLeft() => new(-Y, X);
     /// <summary>Resets this vector to the origin (0, 0).</summary>
     public void Reset() { X = 0; Y = 0; }
     /// <summary>Subtracts <paramref name="x"/> and <paramref name="y"/> from this vector.</summary>
