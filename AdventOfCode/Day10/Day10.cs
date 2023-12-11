@@ -82,17 +82,15 @@ public class Day10(ILogger logger, string path) : Puzzle(logger, path)
         var currentPos = prevPos + prevDir;
         _fullPath.Add(currentPos);
 
-        int totalLength = 1;
         while (currentPos != startingPos)
         {
+            prevDir = currentPos - prevPos;
             prevPos = currentPos;
             currentPos = NextPos(prevDir, currentPos);
             _fullPath.Add(currentPos);
-            prevDir = currentPos - prevPos;
-            totalLength++;
         }
 
-        return totalLength;
+        return _fullPath.Count;
     }
 
     private Vector2Int NextPos(Vector2Int prevDir, Vector2Int currentPos)
