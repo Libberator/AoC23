@@ -51,7 +51,8 @@ public class Day12(ILogger logger, string path) : Puzzle(logger, path)
             if (endIndex >= condition.Length) return total + 1; // this successful group reached end. yay!
             if (condition.Span[endIndex] == DAMAGED) continue; // next char is not a '.' or '?'. that's a no-no
 
-            total += Recurse(report.Next(endIndex + 1), cache); // +1 because we need a '.' spacing between groups
+            var next = new Report(condition[(endIndex + 1)..].TrimStart(WORKING), groups[1..]); // +1 for spacing between groups
+            total += Recurse(next, cache);
         }
         cache.Add(report, total);
         return total;
@@ -59,8 +60,8 @@ public class Day12(ILogger logger, string path) : Puzzle(logger, path)
 
     private readonly record struct Report(ReadOnlyMemory<char> Condition, int[] Groups) : IEquatable<Report>
     {
-        public readonly Report Next(int startIndex) => new(Condition[startIndex..].TrimStart(WORKING), Groups[1..]);
-        public readonly bool Equals(Report other) => Condition.Span.SequenceEqual(other.Condition.Span) && StructuralComparisons.StructuralEqualityComparer.Equals(Groups, other.Groups);
+        public readonly bool Equals(Report other) => Condition.Span.SequenceEqual(other.Condition.Span) &&
+            StructuralComparisons.StructuralEqualityComparer.Equals(Groups, other.Groups);
         public readonly override int GetHashCode() => HashCode.Combine(Condition, StructuralComparisons.StructuralEqualityComparer.GetHashCode(Groups));
     }
 }

@@ -11,7 +11,6 @@ public class Tests
 
     private static readonly ILogger _logger = new TestLogger();
 
-    [Test]
     [TestCaseSource(nameof(TestCaseGenerator))]
     public void TestPuzzle(Puzzle puzzle, string[] expected)
     {
