@@ -38,6 +38,7 @@ public static partial class Utils
     /// <summary>Returns a concatenated string with the <paramref name="source"/> repeated <paramref name="n"/> times.</summary>
     public static string Repeat(this string source, int n) => new StringBuilder(n * source.Length).Insert(0, source, n).ToString();
 
+    // Assumes a rectangular grid of characters
     public static string[] Transpose(this string[] array)
     {
         int rows = array.Length;

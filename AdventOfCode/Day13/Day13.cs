@@ -30,18 +30,18 @@ public class Day13(ILogger logger, string path) : Puzzle(logger, path)
         int total = 0;
         foreach (var pattern in patterns)
         {
-            if (TryFindHorizontalReflection(pattern, out int row, withSmudge))
+            if (TryFindHorizontalReflection(pattern, withSmudge, out int row))
                 total += 100 * row;
-            else if (TryFindVerticalReflection(pattern, out int col, withSmudge))
+            else if (TryFindVerticalReflection(pattern, withSmudge, out int col))
                 total += col;
         }
         return total;
     }
 
-    private static bool TryFindVerticalReflection(string[] pattern, out int foundCol, bool withSmudge = false) =>
-        TryFindHorizontalReflection(pattern.Transpose(), out foundCol, withSmudge);
+    private static bool TryFindVerticalReflection(string[] pattern, bool withSmudge, out int foundCol) =>
+        TryFindHorizontalReflection(pattern.Transpose(), withSmudge, out foundCol);
 
-    private static bool TryFindHorizontalReflection(string[] pattern, out int foundRow, bool withSmudge = false)
+    private static bool TryFindHorizontalReflection(string[] pattern, bool withSmudge, out int foundRow)
     {
         foundRow = 0;
         for (int center = 0; center < pattern.Length - 1; center++)

@@ -75,4 +75,36 @@ public static partial class Utils
 
     public static string JoinAsString<T>(this IEnumerable<T> source, string delimiter = ", ") =>
         string.Join(delimiter, source);
+
+    public static T[,] Transpose<T>(this T[,] source)
+    {
+        int rows = source.GetLength(0);
+        int cols = source.GetLength(1);
+
+        T[,] result = new T[cols, rows];
+
+        for (int col = 0; col < cols; col++)
+            for (int row = 0; row < rows; row++)
+                result[row, col] = source[col, row];
+        return result;
+    }
+
+    // Assumes a rectangular grid
+    public static T[][] Transpose<T>(this T[][] source)
+    {
+        int rows = source.Length;
+        int cols = source[0].Length;
+
+        T[][] result = new T[cols][];
+
+        for (int col = 0; col < cols; col++)
+        {
+            T[] columnBuffer = new T[rows];
+            for (int row = 0; row < rows; row++)
+                columnBuffer[row] = source[row][col];
+
+            result[col] = columnBuffer;
+        }
+        return result;
+    }
 }
