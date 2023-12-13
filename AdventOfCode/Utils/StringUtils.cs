@@ -37,4 +37,24 @@ public static partial class Utils
 
     /// <summary>Returns a concatenated string with the <paramref name="source"/> repeated <paramref name="n"/> times.</summary>
     public static string Repeat(this string source, int n) => new StringBuilder(n * source.Length).Insert(0, source, n).ToString();
+
+    public static string[] Transpose(this string[] array)
+    {
+        int rows = array.Length;
+        int columns = array[0].Length;
+
+        string[] result = new string[columns];
+
+        for (int col = 0; col < columns; col++)
+        {
+            StringBuilder sb = new(rows);
+
+            for (int row = 0; row < rows; row++)
+            {
+                sb.Append(array[row][col]);
+            }
+            result[col] = sb.ToString();
+        }
+        return result;
+    }
 }

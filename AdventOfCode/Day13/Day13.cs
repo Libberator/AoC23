@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace AoC;
 
@@ -15,139 +13,72 @@ public class Day13(ILogger logger, string path) : Puzzle(logger, path)
         int startIndex = 0;
         for (int i = 0; i < data.Length; i++)
         {
-            if (string.IsNullOrEmpty(data[i]))
-            {
-                _patterns.Add(data[startIndex..i]);
-                startIndex = i + 1;
-            }
-
-            if (i == data.Length - 1 && i - startIndex > 1)
-                _patterns.Add(data[startIndex..]);
+            if (!string.IsNullOrEmpty(data[i])) continue;
+            _patterns.Add(data[startIndex..i]);
+            startIndex = i + 1;
         }
+        if (!string.IsNullOrEmpty(data[^1]) && data.Length - startIndex > 1)
+            _patterns.Add(data[startIndex..]); // in case data ends w/o an empty line
     }
 
-    public override void SolvePart1()
+    public override void SolvePart1() => _logger.Log(GetTotalScore(_patterns, withSmudge: false));
+
+    public override void SolvePart2() => _logger.Log(GetTotalScore(_patterns, withSmudge: true));
+
+    private static int GetTotalScore(List<string[]> patterns, bool withSmudge)
     {
-        var total = 0; // col count + 100 * row count
-        int i = 0;
-        foreach (var pattern in _patterns)
+        int total = 0;
+        foreach (var pattern in patterns)
         {
-            if (TryFindHorizontalReflection(pattern, out int row))
-            {
+            if (TryFindHorizontalReflection(pattern, out int row, withSmudge))
                 total += 100 * row;
-            }
-            else if (TryFindVerticalReflection(pattern, out int col))
-            {
+            else if (TryFindVerticalReflection(pattern, out int col, withSmudge))
                 total += col;
-            }
-            i++;
         }
-
-        _logger.Log(total);
+        return total;
     }
 
-    public override void SolvePart2()
+    private static bool TryFindVerticalReflection(string[] pattern, out int foundCol, bool withSmudge = false) =>
+        TryFindHorizontalReflection(pattern.Transpose(), out foundCol, withSmudge);
+
+    private static bool TryFindHorizontalReflection(string[] pattern, out int foundRow, bool withSmudge = false)
     {
-        var total = 0; // col count + 100 * row count
-        int i = 0;
-        foreach (var pattern in _patterns)
-        {
-            if (TryFindHorizontalReflection(pattern, out int row, withSmudge: true))
-            {
-                total += 100 * row;
-            }
-            else if (TryFindVerticalReflection(pattern, out int col, withSmudge: true))
-            {
-                total += col;
-            }
-            i++;
-        }
-
-        _logger.Log(total);
-    }
-
-    private bool TryFindHorizontalReflection(string[] pattern, out int foundRow, bool withSmudge = false)
-    {
-        foundRow = -1;
-
+        foundRow = 0;
         for (int center = 0; center < pattern.Length - 1; center++)
         {
-            bool found = true;
-            int differences = 0;
-            for (int i = 0; i <= center; i++)
-            {
-                var left = center - i;
-                var right = center + i + 1;
-
-                if (left < 0 || right >= pattern.Length) break;
-                if (pattern[left] != pattern[right])
-                {
-                    if (withSmudge)
-                    {
-                        for (int j = 0; j < pattern[left].Length; j++)
-                        {
-                            if (pattern[left][j] != pattern[right][j])
-                                differences++;
-                        }
-                        if (differences > 1)
-                            break;
-                    }
-                    else
-                    {
-                        found = false;
-                        break;
-                    }
-                }
-            }
-
-            if (withSmudge)
-            {
-                if (differences == 1)
-                {
-                    foundRow = center + 1;
-                    break;
-                }
-            }
-            else if (found)
-            {
-                foundRow = center + 1;
-                break;
-            }
+            if (!TryCheckReflection(pattern, center, withSmudge)) continue;
+            foundRow = center + 1;
+            return true;
         }
-        return foundRow != -1;
+        return false;
     }
 
-    private bool TryFindVerticalReflection(string[] pattern, out int foundCol, bool withSmudge = false)
+    private static bool TryCheckReflection(string[] pattern, int center, bool withSmudge)
     {
-        var transposed = TransposeArray(pattern);
-        return TryFindHorizontalReflection(transposed, out foundCol, withSmudge);
-    }
-
-    static string[] TransposeArray(string[] original)
-    {
-        int numRows = original.Length;
-        int numCols = original[0].Length;
-
-        // Create a new array to store the transposed result
-        string[] transposed = new string[numCols];
-
-        // Iterate over columns
-        for (int col = 0; col < numCols; col++)
+        int differences = 0;
+        for (int i = 0; i <= center; i++)
         {
-            // Use StringBuilder for efficient string concatenation
-            StringBuilder columnBuilder = new(numRows);
+            var left = center - i;
+            var right = center + i + 1;
 
-            // Iterate over rows
-            for (int row = 0; row < numRows; row++)
+            if (left < 0 || right >= pattern.Length) break;
+
+            if (pattern[left] != pattern[right])
             {
-                // Append the character at the current column and row to the StringBuilder
-                columnBuilder.Append(original[row][col]);
+                if (!withSmudge) return false;
+
+                differences += CountDifferences(pattern[left], pattern[right]);
+                if (differences > 1) return false;
             }
-
-            // Store the concatenated column in the transposed array
-            transposed[col] = columnBuilder.ToString();
         }
+        return !withSmudge || differences == 1;
+    }
 
-        return transposed;
+    private static int CountDifferences(string left, string right)
+    {
+        int differences = 0;
+        for (int i = 0; i < left.Length; i++)
+            differences += left[i] != right[i] ? 1 : 0;
+        return differences;
     }
 }
