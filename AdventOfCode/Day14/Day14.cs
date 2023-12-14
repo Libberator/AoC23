@@ -9,11 +9,10 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 {
     enum Direction : byte { North, West, South, East }
     private const char ROUND = 'O', SOLID = '#';
-    private const int CYCLES = 1_000_000_000;
 
     private readonly Dictionary<int, List<int>> _solidRocksByRow = [], _solidRocksByCol = [];
     private readonly List<CoordRef> _roundRocks = [];
-    private readonly HashSet<int> _cache = [];
+    private readonly Dictionary<int, int> _cache = [];
     private int _rows, _cols;
 
     public override void Setup()
@@ -50,23 +49,30 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart2()
     {
-        for (int i = 0; i < CYCLES; i++)
+        var cycles = 1_000_000_000;
+        for (int i = 0; i < cycles; i++)
         {
             DoCycle(_roundRocks);
 
-            if (HasHappenedBefore(_roundRocks)) break;
+            if (HasHappenedBefore(_roundRocks, i, out var prevCycle))
+            {
+                var period = i - prevCycle;
+                var remaining = (cycles - i) % period;
+                cycles = i + remaining;
+                // or just break; instead - same end result, but not logically sound
+            }
         }
         _logger.Log(GetScore(_roundRocks));
     }
 
     private int GetScore(List<CoordRef> roundRocks) => roundRocks.Sum(r => _rows - r.Row);
 
-    private bool HasHappenedBefore(List<CoordRef> roundRocks)
+    private bool HasHappenedBefore(List<CoordRef> roundRocks, int cycle, out int prevCycle)
     {
         var hash = GetHash(roundRocks);
-        if (_cache.Contains(hash)) return true;
+        if (_cache.TryGetValue(hash, out prevCycle)) return true;
 
-        _cache.Add(hash);
+        _cache.Add(hash, cycle);
         return false;
 
         int GetHash(List<CoordRef> roundRocks) => HashCode.Combine(GetScore(roundRocks),
@@ -123,7 +129,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
     }
 
     // North, West
-    private void ShiftFromLowToHigh(List<CoordRef> roundRocks, List<int> solidRocks, Direction dir)
+    private void ShiftFromLowToHigh(IEnumerable<CoordRef> roundRocks, List<int> solidRocks, Direction dir)
     {
         int solidIndex = 0;
         var nextSolid = solidRocks.Count > solidIndex ? solidRocks[solidIndex++] : _cols;
