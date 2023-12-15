@@ -7,11 +7,10 @@ namespace AoC;
 
 public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 {
-    enum Direction : byte { North, West, South, East }
     private const char ROUND = 'O', SOLID = '#';
 
     private readonly Dictionary<int, List<int>> _solidRocksByRow = [], _solidRocksByCol = [];
-    private readonly List<CoordRef> _roundRocks = [];
+    private readonly Dictionary<int, List<int>> _roundRocksByRow = [], _roundRocksByCol = [];
     private readonly Dictionary<int, int> _cache = [];
     private int _rows, _cols;
 
@@ -27,15 +26,22 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
             List<int> solidRocksCol = [];
             _solidRocksByCol.Add(row, solidRocksCol); // treat this row as a col
 
+            List<int> roundRocksRow = [];
+            _roundRocksByRow[row] = roundRocksRow;
+            List<int> roundRocksCol = [];
+            _roundRocksByCol[row] = roundRocksCol; // treat this row as a col
+
             var line = grid[row];
             for (int col = 0; col < _cols; col++)
             {
                 if (line[col] == ROUND)
-                    _roundRocks.Add(new(row, col));
+                    roundRocksRow.Add(col);
                 else if (line[col] == SOLID)
                     solidRocksRow.Add(col);
 
-                if (grid[col][row] == SOLID) // swizzled here to traverse column-wise
+                if (grid[col][row] == ROUND) // swizzled here to traverse column-wise
+                    roundRocksCol.Add(col); // treat this col as a row
+                else if (grid[col][row] == SOLID) // swizzled here to traverse column-wise
                     solidRocksCol.Add(col); // treat this col as a row
             }
         }
@@ -43,8 +49,8 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart1()
     {
-        ShiftNorth(_roundRocks, _solidRocksByCol);
-        _logger.Log(GetScore(_roundRocks));
+        ShiftNorth(_roundRocksByCol, _solidRocksByCol);
+        _logger.Log(GetScore(_roundRocksByRow));
     }
 
     public override void SolvePart2()
@@ -52,9 +58,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         var cycles = 1_000_000_000;
         for (int i = 0; i < cycles; i++)
         {
-            DoCycle(_roundRocks);
+            DoCycle();
 
-            if (HasHappenedBefore(_roundRocks, i, out var prevCycle))
+            if (HasHappenedBefore(_roundRocksByRow, _roundRocksByCol, i, out var prevCycle))
             {
                 var period = i - prevCycle;
                 var remaining = (cycles - i) % period;
@@ -62,155 +68,161 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 // or just break; instead - same end result, but not logically sound
             }
         }
-        _logger.Log(GetScore(_roundRocks));
+        _logger.Log(GetScore(_roundRocksByRow));
     }
 
-    private int GetScore(List<CoordRef> roundRocks) => roundRocks.Sum(r => _rows - r.Row);
+    private int GetScore(Dictionary<int, List<int>> roundRocks) => roundRocks.Sum(kvp => (_rows - kvp.Key) * kvp.Value.Count);
 
-    private bool HasHappenedBefore(List<CoordRef> roundRocks, int cycle, out int prevCycle)
+    private bool HasHappenedBefore(Dictionary<int, List<int>> roundRocksRow, Dictionary<int, List<int>> roundRocksCol, int cycle, out int prevCycle)
     {
-        var hash = GetHash(roundRocks);
+        var hash = GetHash(roundRocksRow, roundRocksCol);
         if (_cache.TryGetValue(hash, out prevCycle)) return true;
 
         _cache.Add(hash, cycle);
         return false;
 
-        int GetHash(List<CoordRef> roundRocks) => HashCode.Combine(GetScore(roundRocks),
-            StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRocks.Select(r => r.Row).ToArray()),
-            StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRocks.Select(r => r.Col).ToArray()));
+        int GetHash(Dictionary<int, List<int>> roundRocksRow, Dictionary<int, List<int>> roundRockCol) => HashCode.Combine(GetScore(roundRocksRow),
+            StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRocksRow.SelectMany(kvp => kvp.Value).ToArray()),
+            StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRockCol.SelectMany(kvp => kvp.Value).ToArray()));
     }
 
-    private void DoCycle(List<CoordRef> roundRocks)
+    private void DoCycle()
     {
-        ShiftNorth(roundRocks, _solidRocksByCol);
-        ShiftWest(roundRocks, _solidRocksByRow);
-        ShiftSouth(roundRocks, _solidRocksByCol);
-        ShiftEast(roundRocks, _solidRocksByRow);
+        ShiftNorth(_roundRocksByCol, _solidRocksByCol);
+        ShiftWest(_roundRocksByRow, _solidRocksByRow);
+        ShiftSouth(_roundRocksByCol, _solidRocksByCol);
+        ShiftEast(_roundRocksByRow, _solidRocksByRow);
     }
 
-    private void ShiftNorth(List<CoordRef> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void Move(int fromRow, int fromCol, int toRow, int toCol)
+    {
+        _roundRocksByRow[fromRow].Remove(fromCol);
+        _roundRocksByRow[toRow].Add(toCol);
+        _roundRocksByCol[fromCol].Remove(fromRow);
+        _roundRocksByCol[toCol].Add(toRow);
+    }
+
+    private void ShiftNorth(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
     {
         for (int col = 0; col < _cols; col++)
         {
-            var roundRocksInColumn = roundRocks.Where(r => r.Col == col).ToList();
+            var roundRocksInColumn = roundRocks[col];
             var solidRocksInColumn = solidRocks[col];
-            ShiftFromLowToHigh(roundRocksInColumn, solidRocksInColumn, Direction.North);
+
+            int solidIndex = 0;
+            var nextSolid = solidRocksInColumn.Count > solidIndex ? solidRocksInColumn[solidIndex++] : _cols;
+
+            for (int row = 0; row < _rows; row++)
+            {
+                if (row == nextSolid)
+                {
+                    nextSolid = solidRocksInColumn.Count > solidIndex ? solidRocksInColumn[solidIndex++] : _cols;
+                    continue;
+                }
+
+                if (roundRocksInColumn.Any(r => r == row))
+                    continue; // occupied
+
+                var rocksToMoveUp = roundRocksInColumn.Where(r => r > row && r < nextSolid);
+                if (rocksToMoveUp.Any())
+                {
+                    var rockToMoveUp = rocksToMoveUp.Min();
+                    Move(rockToMoveUp, col, row, col);
+                }
+            }
         }
     }
 
-    private void ShiftWest(List<CoordRef> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftWest(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
     {
         for (int row = 0; row < _rows; row++)
         {
-            var roundRocksInRow = roundRocks.Where(r => r.Row == row).ToList();
+            var roundRocksInRow = roundRocks[row];
             var solidRocksInRow = solidRocks[row];
-            ShiftFromLowToHigh(roundRocksInRow, solidRocksInRow, Direction.West);
+
+            int solidIndex = 0;
+            var nextSolid = solidRocksInRow.Count > solidIndex ? solidRocksInRow[solidIndex++] : _rows;
+
+            for (int col = 0; col < _cols; col++)
+            {
+                if (col == nextSolid)
+                {
+                    nextSolid = solidRocksInRow.Count > solidIndex ? solidRocksInRow[solidIndex++] : _rows;
+                    continue;
+                }
+
+                if (roundRocksInRow.Any(r => r == col))
+                    continue; // occupied
+
+                var rocksToMoveLeft = roundRocksInRow.Where(r => r > col && r < nextSolid);
+                if (rocksToMoveLeft.Any())
+                {
+                    var rockToMoveLeft = rocksToMoveLeft.Min();
+                    Move(row, rockToMoveLeft, row, col);
+                }
+            }
         }
     }
 
-    private void ShiftSouth(List<CoordRef> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftSouth(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
     {
         for (int col = 0; col < _cols; col++)
         {
-            var roundRocksInColumn = roundRocks.Where(r => r.Col == col).ToList();
+            var roundRocksInColumn = roundRocks[col];
             var solidRocksInColumn = solidRocks[col].OrderDescending().ToList();
-            ShiftFromHighToLow(roundRocksInColumn, solidRocksInColumn, Direction.South);
+
+            int solidIndex = 0;
+            var nextSolid = solidRocksInColumn.Count > solidIndex ? solidRocksInColumn[solidIndex++] : -1;
+
+            for (int row = _rows - 1; row >= 0; row--)
+            {
+                if (row == nextSolid)
+                {
+                    nextSolid = solidRocksInColumn.Count > solidIndex ? solidRocksInColumn[solidIndex++] : -1;
+                    continue;
+                }
+
+                if (roundRocksInColumn.Any(r => r == row))
+                    continue; // occupied
+
+                var rocksToMoveDown = roundRocksInColumn.Where(r => r < row && r > nextSolid);
+                if (rocksToMoveDown.Any())
+                {
+                    var rockToMoveDown = rocksToMoveDown.Max();
+                    Move(rockToMoveDown, col, row, col);
+                }
+            }
         }
     }
 
-    private void ShiftEast(List<CoordRef> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftEast(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
     {
         for (int row = 0; row < _rows; row++)
         {
-            var roundRocksInRow = roundRocks.Where(r => r.Row == row).ToList();
+            var roundRocksInRow = roundRocks[row];
             var solidRocksInRow = solidRocks[row].OrderDescending().ToList();
-            ShiftFromHighToLow(roundRocksInRow, solidRocksInRow, Direction.East);
-        }
-    }
 
-    // North, West
-    private void ShiftFromLowToHigh(IEnumerable<CoordRef> roundRocks, List<int> solidRocks, Direction dir)
-    {
-        int solidIndex = 0;
-        var nextSolid = solidRocks.Count > solidIndex ? solidRocks[solidIndex++] : _cols;
+            int solidIndex = 0;
+            var nextSolid = solidRocksInRow.Count > solidIndex ? solidRocksInRow[solidIndex++] : -1;
 
-        for (int i = 0; i < _cols; i++)
-        {
-            if (i == nextSolid)
+            for (int col = _cols - 1; col >= 0; col--)
             {
-                nextSolid = solidRocks.Count > solidIndex ? solidRocks[solidIndex++] : _cols;
-                continue;
-            }
+                if (col == nextSolid)
+                {
+                    nextSolid = solidRocksInRow.Count > solidIndex ? solidRocksInRow[solidIndex++] : -1;
+                    continue;
+                }
 
-            if (dir is Direction.West)
-            {
-                if (roundRocks.Any(r => r.Col == i))
+                if (roundRocksInRow.Any(r => r == col))
                     continue; // occupied
-            }
-            else if (roundRocks.Any(r => r.Row == i))
-                continue; // occupied
 
-            switch (dir)
-            {
-                case Direction.North:
-                    var rockToMoveUp = roundRocks.FirstOrDefault(r => r.Row > i && r.Row < nextSolid);
-                    if (rockToMoveUp != null)
-                        rockToMoveUp.Row = i;
-                    break;
-                case Direction.West:
-                    var rockToMoveLeft = roundRocks.FirstOrDefault(r => r.Col > i && r.Col < nextSolid);
-                    if (rockToMoveLeft != null)
-                        rockToMoveLeft.Col = i;
-                    break;
-                default:
-                    break;
+                var rocksToMoveRight = roundRocksInRow.Where(r => r < col && r > nextSolid);
+                if (rocksToMoveRight.Any())
+                {
+                    var rockToMoveRight = rocksToMoveRight.Max();
+                    Move(row, rockToMoveRight, row, col);
+                }
             }
         }
-    }
-
-    // East, South
-    private void ShiftFromHighToLow(List<CoordRef> roundRocks, List<int> solidRocks, Direction dir)
-    {
-        int solidIndex = 0;
-        var nextSolid = solidRocks.Count > solidIndex ? solidRocks[solidIndex++] : -1;
-
-        for (int i = _cols - 1; i >= 0; i--)
-        {
-            if (i == nextSolid)
-            {
-                nextSolid = solidRocks.Count > solidIndex ? solidRocks[solidIndex++] : -1;
-                continue;
-            }
-
-            if (dir is Direction.East)
-            {
-                if (roundRocks.Any(r => r.Col == i))
-                    continue; // occupied
-            }
-            else if (roundRocks.Any(r => r.Row == i))
-                continue; // occupied
-
-            switch (dir)
-            {
-                case Direction.South:
-                    var rockToMoveDown = roundRocks.FirstOrDefault(r => r.Row < i && r.Row > nextSolid);
-                    if (rockToMoveDown != null)
-                        rockToMoveDown.Row = i;
-                    break;
-                case Direction.East:
-                    var rockToMoveRight = roundRocks.FirstOrDefault(r => r.Col < i && r.Col > nextSolid);
-                    if (rockToMoveRight != null)
-                        rockToMoveRight.Col = i;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    private class CoordRef(int row, int col)
-    {
-        public int Row { get; set; } = row;
-        public int Col { get; set; } = col;
     }
 }
