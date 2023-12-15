@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 
 namespace AoC;
 
@@ -7,32 +6,35 @@ public class Day15(ILogger logger, string path) : Puzzle(logger, path)
 {
     private const char DASH = '-', EQUALS = '=';
     private string[] _instructions = [];
-    private readonly List<Lens>[] _lensBoxes = new List<Lens>[256];
 
-    public override void Setup()
+    public override void Setup() => _instructions = ReadAllLines()[0].Split(',');
+
+    public override void SolvePart1()
     {
-        _instructions = ReadAllLines()[0].Split(',');
-        for (int i = 0; i < 256; i++)
-            _lensBoxes[i] = [];
+        int total = 0;
+        foreach (var instruction in _instructions)
+            total += HashString(instruction);
+        _logger.Log(total);
     }
-
-    public override void SolvePart1() => _logger.Log(_instructions.Sum(HashString));
 
     public override void SolvePart2()
     {
-        PerformInstructions(_instructions, _lensBoxes);
-        _logger.Log(GetFocusingPower(_lensBoxes));
+        var lensBoxes = new List<Lens>[256];
+        for (int i = 0; i < 256; i++)
+            lensBoxes[i] = [];
+
+        PerformInstructions(_instructions, lensBoxes);
+
+        _logger.Log(GetFocusingPower(lensBoxes));
     }
 
-    private static int HashString(string label)
+    private static byte HashString(string label)
     {
-        var total = 0;
+        byte total = 0;
         foreach (var c in label)
-            total = HashWithChar(total, c);
+            total = (byte)((total + c) * 17); // casting to byte does modulus 256 automatically
         return total;
     }
-
-    private static int HashWithChar(int value, char c) => (value + c) * 17 % 256;
 
     private static void PerformInstructions(string[] instructions, List<Lens>[] lensBoxes)
     {
@@ -42,45 +44,40 @@ public class Day15(ILogger logger, string path) : Puzzle(logger, path)
             {
                 var label = instr[..instr.IndexOf(EQUALS)];
                 var focus = instr[^1] - '0';
-                AddOrAdjustLens(label, focus, lensBoxes);
+                var boxIndex = HashString(label);
+                AddOrAdjustLens(label, focus, boxIndex, lensBoxes);
             }
             else // if (instr.Contains(DASH))
             {
                 var label = instr[..instr.IndexOf(DASH)];
-                RemoveLens(label, lensBoxes);
+                var boxIndex = HashString(label);
+                RemoveLens(label, boxIndex, lensBoxes);
             }
         }
     }
 
-    private static void AddOrAdjustLens(string label, int focus, List<Lens>[] lensBoxes)
+    private static void AddOrAdjustLens(string label, int focus, int boxIndex, List<Lens>[] lensBoxes)
     {
         // Adjust if we found one
-        foreach (var box in lensBoxes)
+        var box = lensBoxes[boxIndex];
+        var lens = box.Find(l => l.Label.Equals(label));
+        if (lens != null)
         {
-            foreach (var lens in box)
-            {
-                if (lens.Label != label) continue;
-                lens.Focus = focus;
-                return;
-            }
+            lens.Focus = focus;
+            return;
         }
+
         // Create a new one if we didn't find one
         var newLens = new Lens(label, focus);
-        var boxIndex = HashString(label);
-        lensBoxes[boxIndex].Add(newLens);
+        box.Add(newLens);
     }
 
-    private static void RemoveLens(string label, List<Lens>[] lensBoxes)
+    private static void RemoveLens(string label, int boxIndex, List<Lens>[] lensBoxes)
     {
-        foreach (var box in lensBoxes)
-        {
-            foreach (var lens in box)
-            {
-                if (lens.Label != label) continue;
-                box.Remove(lens);
-                return;
-            }
-        }
+        var box = lensBoxes[boxIndex];
+        var lens = box.Find(l => l.Label.Equals(label));
+        if (lens != null)
+            box.Remove(lens);
     }
 
     private static int GetFocusingPower(List<Lens>[] lensBoxes)

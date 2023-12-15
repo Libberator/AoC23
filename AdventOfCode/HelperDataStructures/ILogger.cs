@@ -6,6 +6,7 @@ public interface ILogger
 {
     public string? LastMessage { get; }
     public void Log(string? msg);
+    public void Log(byte msg) => Log(msg.ToString());
     public void Log(int msg) => Log(msg.ToString());
     public void Log(long msg) => Log(msg.ToString());
     public void Log(float msg) => Log(msg.ToString());
