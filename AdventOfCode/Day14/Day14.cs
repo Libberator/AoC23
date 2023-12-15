@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace AoC;
@@ -11,7 +9,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 
     private readonly Dictionary<int, List<int>> _solidRocksByRow = [], _solidRocksByCol = [];
     private readonly Dictionary<int, List<int>> _roundRocksByRow = [], _roundRocksByCol = [];
-    private readonly Dictionary<int, int> _cache = [];
+    private readonly Dictionary<long, int> _cache = [];
     private int _rows, _cols;
 
     public override void Setup()
@@ -60,7 +58,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         {
             DoCycle();
 
-            if (HasHappenedBefore(_roundRocksByRow, _roundRocksByCol, i, out var prevCycle))
+            if (HasHappenedBefore(_roundRocksByRow, i, out var prevCycle))
             {
                 var period = i - prevCycle;
                 var remaining = (cycles - i) % period;
@@ -73,17 +71,21 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 
     private int GetScore(Dictionary<int, List<int>> roundRocks) => roundRocks.Sum(kvp => (_rows - kvp.Key) * kvp.Value.Count);
 
-    private bool HasHappenedBefore(Dictionary<int, List<int>> roundRocksRow, Dictionary<int, List<int>> roundRocksCol, int cycle, out int prevCycle)
+    private bool HasHappenedBefore(Dictionary<int, List<int>> roundRocksRow, int cycle, out int prevCycle)
     {
-        var hash = GetHash(roundRocksRow, roundRocksCol);
+        var hash = GetHash(roundRocksRow);
         if (_cache.TryGetValue(hash, out prevCycle)) return true;
 
         _cache.Add(hash, cycle);
         return false;
 
-        int GetHash(Dictionary<int, List<int>> roundRocksRow, Dictionary<int, List<int>> roundRockCol) => HashCode.Combine(GetScore(roundRocksRow),
-            StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRocksRow.SelectMany(kvp => kvp.Value).ToArray()),
-            StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRockCol.SelectMany(kvp => kvp.Value).ToArray()));
+        long GetHash(Dictionary<int, List<int>> roundRocksRow)
+        {
+            long hash = GetScore(roundRocksRow);
+            foreach (var kvp in roundRocksRow)
+                hash ^= 1 << (((kvp.Key * _rows) + kvp.Value.Count) % 64); // XOR over each position % 64
+            return hash;
+        }
     }
 
     private void DoCycle()
