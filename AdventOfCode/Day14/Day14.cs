@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace AoC;
@@ -7,9 +9,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 {
     private const char ROUND = 'O', SOLID = '#';
 
-    private readonly Dictionary<int, List<int>> _solidRocksByRow = [], _solidRocksByCol = [];
-    private readonly Dictionary<int, List<int>> _roundRocksByRow = [], _roundRocksByCol = [];
-    private readonly Dictionary<long, int> _cache = [];
+    private readonly List<List<int>> _roundRocksByRow = [], _solidRocksByRow = [];
+    private readonly List<List<int>> _roundRocksByCol = [], _solidRocksByCol = [];
+    private readonly List<int> _cache = [];
     private int _rows, _cols;
 
     public override void Setup()
@@ -19,28 +21,26 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         _cols = grid[0].Length;
         for (int row = 0; row < _rows; row++)
         {
-            List<int> solidRocksRow = [];
-            _solidRocksByRow.Add(row, solidRocksRow);
-            List<int> solidRocksCol = [];
-            _solidRocksByCol.Add(row, solidRocksCol); // treat this row as a col
-
             List<int> roundRocksRow = [];
-            _roundRocksByRow[row] = roundRocksRow;
+            _roundRocksByRow.Add(roundRocksRow);
+            List<int> solidRocksRow = [];
+            _solidRocksByRow.Add(solidRocksRow);
+
             List<int> roundRocksCol = [];
-            _roundRocksByCol[row] = roundRocksCol; // treat this row as a col
+            _roundRocksByCol.Add(roundRocksCol);
+            List<int> solidRocksCol = [];
+            _solidRocksByCol.Add(solidRocksCol);
 
             var line = grid[row];
             for (int col = 0; col < _cols; col++)
             {
-                if (line[col] == ROUND)
-                    roundRocksRow.Add(col);
-                else if (line[col] == SOLID)
-                    solidRocksRow.Add(col);
+                // row-wise
+                if (line[col] == ROUND) roundRocksRow.Add(col);
+                else if (line[col] == SOLID) solidRocksRow.Add(col);
 
-                if (grid[col][row] == ROUND) // swizzled here to traverse column-wise
-                    roundRocksCol.Add(col); // treat this col as a row
-                else if (grid[col][row] == SOLID) // swizzled here to traverse column-wise
-                    solidRocksCol.Add(col); // treat this col as a row
+                // column-wise. swizzled
+                if (grid[col][row] == ROUND) roundRocksCol.Add(col);
+                else if (grid[col][row] == SOLID) solidRocksCol.Add(col);
             }
         }
     }
@@ -58,7 +58,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         {
             DoCycle();
 
-            if (HasHappenedBefore(_roundRocksByRow, i, out var prevCycle))
+            if (HasHappenedBefore(_roundRocksByRow, out var prevCycle))
             {
                 var period = i - prevCycle;
                 var remaining = (cycles - i) % period;
@@ -69,23 +69,19 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         _logger.Log(GetScore(_roundRocksByRow));
     }
 
-    private int GetScore(Dictionary<int, List<int>> roundRocks) => roundRocks.Sum(kvp => (_rows - kvp.Key) * kvp.Value.Count);
+    private int GetScore(List<List<int>> roundRocks) => roundRocks.Select((row, index) => (_rows - index) * row.Count).Sum();
 
-    private bool HasHappenedBefore(Dictionary<int, List<int>> roundRocksRow, int cycle, out int prevCycle)
+    private bool HasHappenedBefore(List<List<int>> roundRocksRow, out int prevCycle)
     {
-        var hash = GetHash(roundRocksRow);
-        if (_cache.TryGetValue(hash, out prevCycle)) return true;
+        var hash = GetHash(GetScore(roundRocksRow), roundRocksRow);
+        prevCycle = _cache.IndexOf(hash);
+        if (prevCycle != -1) return true;
 
-        _cache.Add(hash, cycle);
+        _cache.Add(hash);
         return false;
 
-        long GetHash(Dictionary<int, List<int>> roundRocksRow)
-        {
-            long hash = GetScore(roundRocksRow);
-            foreach (var kvp in roundRocksRow)
-                hash ^= 1 << (((kvp.Key * _rows) + kvp.Value.Count) % 64); // XOR over each position % 64
-            return hash;
-        }
+        static int GetHash(int score, List<List<int>> roundRocksRow) =>
+            HashCode.Combine(score, StructuralComparisons.StructuralEqualityComparer.GetHashCode(roundRocksRow.SelectMany(row => row).ToArray()));
     }
 
     private void DoCycle()
@@ -104,7 +100,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         _roundRocksByCol[toCol].Add(toRow);
     }
 
-    private void ShiftNorth(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftNorth(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
         for (int col = 0; col < _cols; col++)
         {
@@ -125,6 +121,8 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 if (roundRocksInColumn.Any(r => r == row))
                     continue; // occupied
 
+                // TODO: look for optimizations here - leapfrog from the back instead of doing all 1-at-a-time?
+
                 var rocksToMoveUp = roundRocksInColumn.Where(r => r > row && r < nextSolid).ToList();
                 for (int i = rocksToMoveUp.Count - 1; i >= 0; i--)
                     Move(rocksToMoveUp[i], col, row++, col);
@@ -132,7 +130,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         }
     }
 
-    private void ShiftWest(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftWest(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
         for (int row = 0; row < _rows; row++)
         {
@@ -160,7 +158,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         }
     }
 
-    private void ShiftSouth(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftSouth(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
         for (int col = 0; col < _cols; col++)
         {
@@ -188,7 +186,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         }
     }
 
-    private void ShiftEast(Dictionary<int, List<int>> roundRocks, Dictionary<int, List<int>> solidRocks)
+    private void ShiftEast(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
         for (int row = 0; row < _rows; row++)
         {
