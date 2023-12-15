@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AoC;
 
@@ -13,6 +14,7 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
     private readonly List<List<int>> _roundRocksByCol = [], _solidRocksByCol = [];
     private readonly List<int> _cache = [];
     private int _rows, _cols;
+    private readonly object _lock = new();
 
     public override void Setup()
     {
@@ -94,15 +96,18 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
 
     private void Move(int fromRow, int fromCol, int toRow, int toCol)
     {
-        _roundRocksByRow[fromRow].Remove(fromCol);
-        _roundRocksByRow[toRow].Add(toCol);
-        _roundRocksByCol[fromCol].Remove(fromRow);
-        _roundRocksByCol[toCol].Add(toRow);
+        lock (_lock)
+        {
+            _roundRocksByRow[fromRow].Remove(fromCol);
+            _roundRocksByRow[toRow].Add(toCol);
+            _roundRocksByCol[fromCol].Remove(fromRow);
+            _roundRocksByCol[toCol].Add(toRow);
+        }
     }
 
     private void ShiftNorth(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
-        for (int col = 0; col < _cols; col++)
+        Parallel.For(0, _cols, col =>
         {
             var roundRocksInColumn = roundRocks[col];
             var solidRocksInColumn = solidRocks[col];
@@ -118,21 +123,18 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                     continue;
                 }
 
-                if (roundRocksInColumn.Any(r => r == row))
-                    continue; // occupied
-
-                // TODO: look for optimizations here - leapfrog from the back instead of doing all 1-at-a-time?
+                if (roundRocksInColumn.Any(r => r == row)) continue; // occupied
 
                 var rocksToMoveUp = roundRocksInColumn.Where(r => r > row && r < nextSolid).ToList();
                 for (int i = rocksToMoveUp.Count - 1; i >= 0; i--)
                     Move(rocksToMoveUp[i], col, row++, col);
             }
-        }
+        });
     }
 
     private void ShiftWest(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
-        for (int row = 0; row < _rows; row++)
+        Parallel.For(0, _rows, row =>
         {
             var roundRocksInRow = roundRocks[row];
             var solidRocksInRow = solidRocks[row];
@@ -148,19 +150,18 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                     continue;
                 }
 
-                if (roundRocksInRow.Any(r => r == col))
-                    continue; // occupied
+                if (roundRocksInRow.Any(r => r == col)) continue; // occupied
 
                 var rocksToMoveLeft = roundRocksInRow.Where(r => r > col && r < nextSolid).ToList();
                 for (int i = rocksToMoveLeft.Count - 1; i >= 0; i--)
                     Move(row, rocksToMoveLeft[i], row, col++);
             }
-        }
+        });
     }
 
     private void ShiftSouth(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
-        for (int col = 0; col < _cols; col++)
+        Parallel.For(0, _cols, col =>
         {
             var roundRocksInColumn = roundRocks[col];
             var solidRocksInColumn = solidRocks[col].OrderDescending().ToList();
@@ -176,19 +177,18 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                     continue;
                 }
 
-                if (roundRocksInColumn.Any(r => r == row))
-                    continue; // occupied
+                if (roundRocksInColumn.Any(r => r == row)) continue; // occupied
 
                 var rocksToMoveDown = roundRocksInColumn.Where(r => r < row && r > nextSolid).ToList();
                 for (int i = rocksToMoveDown.Count - 1; i >= 0; i--)
                     Move(rocksToMoveDown[i], col, row--, col);
             }
-        }
+        });
     }
 
     private void ShiftEast(List<List<int>> roundRocks, List<List<int>> solidRocks)
     {
-        for (int row = 0; row < _rows; row++)
+        Parallel.For(0, _rows, row =>
         {
             var roundRocksInRow = roundRocks[row];
             var solidRocksInRow = solidRocks[row].OrderDescending().ToList();
@@ -204,13 +204,12 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                     continue;
                 }
 
-                if (roundRocksInRow.Any(r => r == col))
-                    continue; // occupied
+                if (roundRocksInRow.Any(r => r == col)) continue; // occupied
 
                 var rocksToMoveRight = roundRocksInRow.Where(r => r < col && r > nextSolid).ToList();
                 for (int i = rocksToMoveRight.Count - 1; i >= 0; i--)
                     Move(row, rocksToMoveRight[i], row, col--);
             }
-        }
+        });
     }
 }
