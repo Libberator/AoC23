@@ -5,9 +5,8 @@ namespace AoC;
 
 public class Day15(ILogger logger, string path) : Puzzle(logger, path)
 {
-    private string[] _instructions = [];
     private const char DASH = '-', EQUALS = '=';
-
+    private string[] _instructions = [];
     private readonly List<Lens>[] _lensBoxes = new List<Lens>[256];
 
     public override void Setup()
@@ -42,8 +41,8 @@ public class Day15(ILogger logger, string path) : Puzzle(logger, path)
             if (instr.Contains(EQUALS))
             {
                 var label = instr[..instr.IndexOf(EQUALS)];
-                var value = instr[^1] - '0';
-                AddOrAdjustLens(label, value, lensBoxes);
+                var focus = instr[^1] - '0';
+                AddOrAdjustLens(label, focus, lensBoxes);
             }
             else // if (instr.Contains(DASH))
             {
@@ -53,7 +52,7 @@ public class Day15(ILogger logger, string path) : Puzzle(logger, path)
         }
     }
 
-    private static void AddOrAdjustLens(string label, int value, List<Lens>[] lensBoxes)
+    private static void AddOrAdjustLens(string label, int focus, List<Lens>[] lensBoxes)
     {
         // Adjust if we found one
         foreach (var box in lensBoxes)
@@ -61,12 +60,12 @@ public class Day15(ILogger logger, string path) : Puzzle(logger, path)
             foreach (var lens in box)
             {
                 if (lens.Label != label) continue;
-                lens.Focus = value; 
+                lens.Focus = focus;
                 return;
             }
         }
         // Create a new one if we didn't find one
-        var newLens = new Lens(label, value);
+        var newLens = new Lens(label, focus);
         var boxIndex = HashString(label);
         lensBoxes[boxIndex].Add(newLens);
     }
@@ -86,15 +85,15 @@ public class Day15(ILogger logger, string path) : Puzzle(logger, path)
 
     private static int GetFocusingPower(List<Lens>[] lensBoxes)
     {
-        var total = 0;
-        int boxIndex = 1;
-        foreach (var box in lensBoxes)
+        int total = 0;
+        for (int boxNumber = 0; boxNumber < lensBoxes.Length; boxNumber++)
         {
-            int subtotal = 0;
-            int slot = 1;
-            foreach (var lens in box)
-                subtotal += lens.Focus * slot++;
-            total += subtotal * boxIndex++;
+            var box = lensBoxes[boxNumber];
+            for (int slotNumber = 0; slotNumber < box.Count; slotNumber++)
+            {
+                var lens = box[slotNumber];
+                total += (boxNumber + 1) * (slotNumber + 1) * lens.Focus;
+            }
         }
         return total;
     }
