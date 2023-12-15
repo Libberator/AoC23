@@ -123,12 +123,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 if (roundRocksInColumn.Any(r => r == row))
                     continue; // occupied
 
-                var rocksToMoveUp = roundRocksInColumn.Where(r => r > row && r < nextSolid);
-                if (rocksToMoveUp.Any())
-                {
-                    var rockToMoveUp = rocksToMoveUp.Min();
-                    Move(rockToMoveUp, col, row, col);
-                }
+                var rocksToMoveUp = roundRocksInColumn.Where(r => r > row && r < nextSolid).ToList();
+                for (int i = rocksToMoveUp.Count - 1; i >= 0; i--)
+                    Move(rocksToMoveUp[i], col, row++, col);
             }
         }
     }
@@ -154,12 +151,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 if (roundRocksInRow.Any(r => r == col))
                     continue; // occupied
 
-                var rocksToMoveLeft = roundRocksInRow.Where(r => r > col && r < nextSolid);
-                if (rocksToMoveLeft.Any())
-                {
-                    var rockToMoveLeft = rocksToMoveLeft.Min();
-                    Move(row, rockToMoveLeft, row, col);
-                }
+                var rocksToMoveLeft = roundRocksInRow.Where(r => r > col && r < nextSolid).ToList();
+                for (int i = rocksToMoveLeft.Count - 1; i >= 0; i--)
+                    Move(row, rocksToMoveLeft[i], row, col++);
             }
         }
     }
@@ -185,12 +179,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 if (roundRocksInColumn.Any(r => r == row))
                     continue; // occupied
 
-                var rocksToMoveDown = roundRocksInColumn.Where(r => r < row && r > nextSolid);
-                if (rocksToMoveDown.Any())
-                {
-                    var rockToMoveDown = rocksToMoveDown.Max();
-                    Move(rockToMoveDown, col, row, col);
-                }
+                var rocksToMoveDown = roundRocksInColumn.Where(r => r < row && r > nextSolid).ToList();
+                for (int i = rocksToMoveDown.Count - 1; i >= 0; i--)
+                    Move(rocksToMoveDown[i], col, row--, col);
             }
         }
     }
@@ -216,12 +207,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 if (roundRocksInRow.Any(r => r == col))
                     continue; // occupied
 
-                var rocksToMoveRight = roundRocksInRow.Where(r => r < col && r > nextSolid);
-                if (rocksToMoveRight.Any())
-                {
-                    var rockToMoveRight = rocksToMoveRight.Max();
-                    Move(row, rockToMoveRight, row, col);
-                }
+                var rocksToMoveRight = roundRocksInRow.Where(r => r < col && r > nextSolid).ToList();
+                for (int i = rocksToMoveRight.Count - 1; i >= 0; i--)
+                    Move(row, rocksToMoveRight[i], row, col--);
             }
         }
     }
