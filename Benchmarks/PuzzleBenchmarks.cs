@@ -7,28 +7,23 @@ namespace Benchmarks;
 public class PuzzleBenchmarks
 {
     private readonly ILogger _logger = new BenchmarkLogger();
-    private string _path = Utils.FullPath(15);
-    private Day15 _puzzle;
+    private readonly string _path = Utils.FullPath(15);
+    //private Day15 _puzzle;
 
-    [GlobalSetup]
-    public void Setup()
-    {
-        _puzzle = new Day15(_logger, _path);
-        _puzzle.Setup();
-    }
-
-    [Benchmark]
-    public void Part1()
-    {
-        //_puzzle.Setup();
-        _puzzle.SolvePart1();
-    }
+    //[GlobalSetup]
+    //public void Setup()
+    //{
+    //    _puzzle = new Day15(_logger, _path);
+    //    _puzzle.Setup();
+    //}
 
     [Benchmark]
-    public void Part2()
+    public void MyPuzzle()
     {
-        //_puzzle.Setup();
-        _puzzle.SolvePart2();
+        var puzzle = new Day16(_logger, _path);
+        puzzle.Setup();
+        puzzle.SolvePart1();
+        puzzle.SolvePart2();
     }
 }
 
