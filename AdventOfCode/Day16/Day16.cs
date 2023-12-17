@@ -8,7 +8,7 @@ namespace AoC;
 
 public class Day16(ILogger logger, string path) : Puzzle(logger, path)
 {
-    private const char EMPTY = '.', BACKSLASH = '\\', FORWARD_SLASH = '/', VERT_SPLITTER = '|', HORIZ_SPLITTER = '-';
+    private const char EMPTY = '.', FORWARD_SLASH = '/', BACKSLASH = '\\', VERT_SPLITTER = '|', HORIZ_SPLITTER = '-';
 
     private string[] _grid = [];
     private int _rows, _cols;
@@ -29,17 +29,10 @@ public class Day16(ILogger logger, string path) : Puzzle(logger, path)
         // this loop assumes a Square Grid, where _rows == _cols
         Parallel.For(0, _rows, i =>
         {
-            var leftPos = new Vector2Int(i, -1);
-            var score = GetTotalEnergizedFrom(leftPos, Vector2Int.N); // East
-
-            var rightPos = new Vector2Int(i, _cols);
-            score = Math.Max(score, GetTotalEnergizedFrom(rightPos, Vector2Int.S)); // West
-
-            var botPos = new Vector2Int(_rows, i);
-            score = Math.Max(score, GetTotalEnergizedFrom(botPos, Vector2Int.W)); // North
-
-            var topPos = new Vector2Int(-1, i);
-            score = Math.Max(score, GetTotalEnergizedFrom(topPos, Vector2Int.E)); // South
+            var score = GetTotalEnergizedFrom(new Vector2Int(i, -1), Vector2Int.N); // Left side, firing East
+            score = Math.Max(score, GetTotalEnergizedFrom(new Vector2Int(i, _cols), Vector2Int.S)); // West
+            score = Math.Max(score, GetTotalEnergizedFrom(new Vector2Int(_rows, i), Vector2Int.W)); // North
+            score = Math.Max(score, GetTotalEnergizedFrom(new Vector2Int(-1, i), Vector2Int.E)); // South
 
             if (score > highScore) Interlocked.Exchange(ref highScore, score);
         });
@@ -72,24 +65,20 @@ public class Day16(ILogger logger, string path) : Puzzle(logger, path)
                 switch (_grid[beam.Pos.X][beam.Pos.Y])
                 {
                     case EMPTY: break;
-                    case VERT_SPLITTER:
-                        if (ShouldSplitVertically(beam.Dir))
-                        {
-                            beam.Dir = Vector2Int.W; // Split Upwards
-                            var newBeam = new Beam(beam.Pos, Vector2Int.E); // Split Downwards
-                            beams.Add(newBeam);
-                        }
+                    case FORWARD_SLASH:
+                        beam.Dir = new Vector2Int(-beam.Dir.Y, -beam.Dir.X);
                         break;
-                    case HORIZ_SPLITTER:
-                        if (ShouldSplitHorizontally(beam.Dir))
-                        {
-                            beam.Dir = Vector2Int.S; // Split Leftwards
-                            var newBeam = new Beam(beam.Pos, Vector2Int.N); // Split Rightwards
-                            beams.Add(newBeam);
-                        }
+                    case BACKSLASH:
+                        beam.Dir = new Vector2Int(beam.Dir.Y, beam.Dir.X);
                         break;
-                    case BACKSLASH: beam.Dir = ReflectBackslash(beam.Dir); break;
-                    case FORWARD_SLASH: beam.Dir = ReflectForwardSlash(beam.Dir); break;
+                    case VERT_SPLITTER when beam.Dir.X == 0: // Moving Horizontally
+                        beam.Dir = Vector2Int.W; // Split Upwards
+                        beams.Add(new Beam(beam.Pos, Vector2Int.E)); // Split Downwards
+                        break;
+                    case HORIZ_SPLITTER when beam.Dir.Y == 0: // Moving Vertically
+                        beam.Dir = Vector2Int.S; // Split Leftwards
+                        beams.Add(new Beam(beam.Pos, Vector2Int.N)); // Split Rightwards
+                        break;
                 }
             }
         }
@@ -98,31 +87,12 @@ public class Day16(ILogger logger, string path) : Puzzle(logger, path)
     }
 
     private bool IsInGrid(Vector2Int pos) => pos.X >= 0 && pos.Y >= 0 && pos.X < _rows && pos.Y < _cols;
-    private static bool ShouldSplitVertically(Vector2Int dir) => dir == Vector2Int.N || dir == Vector2Int.S;
-    private static bool ShouldSplitHorizontally(Vector2Int dir) => dir == Vector2Int.E || dir == Vector2Int.W;
 
-    private static Vector2Int ReflectBackslash(Vector2Int dir) // hit '\'
-    {
-        if (dir == Vector2Int.N) return Vector2Int.E; // east -> south
-        else if (dir == Vector2Int.E) return Vector2Int.N; // south -> east
-        else if (dir == Vector2Int.S) return Vector2Int.W; // west -> north
-        else return Vector2Int.S; // north -> west
-    }
-
-    private static Vector2Int ReflectForwardSlash(Vector2Int dir) // hit '/'
-    {
-        if (dir == Vector2Int.N) return Vector2Int.W; // east -> north
-        else if (dir == Vector2Int.E) return Vector2Int.S; // south -> west
-        else if (dir == Vector2Int.S) return Vector2Int.E; // west -> south
-        else return Vector2Int.N; // north -> east
-    }
-
-    public class Beam(Vector2Int pos, Vector2Int dir)
+    private record struct BeamSnapshot(Vector2Int Pos, Vector2Int Dir);
+    private class Beam(Vector2Int pos, Vector2Int dir)
     {
         public Vector2Int Pos = pos;
         public Vector2Int Dir = dir;
         public BeamSnapshot Snapshot() => new(Pos, Dir);
     }
-
-    public record struct BeamSnapshot(Vector2Int Pos, Vector2Int Dir);
 }
