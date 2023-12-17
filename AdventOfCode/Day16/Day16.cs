@@ -20,7 +20,7 @@ public class Day16(ILogger logger, string path) : Puzzle(logger, path)
         _cols = _grid[0].Length;
     }
 
-    public override void SolvePart1() => logger.Log(GetTotalEnergizedFrom(new(0, -1), new(0, 1)));
+    public override void SolvePart1() => _logger.Log(GetTotalEnergizedFrom(new(0, -1), new(0, 1)));
 
     public override void SolvePart2()
     {
