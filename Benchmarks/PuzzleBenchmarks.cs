@@ -6,18 +6,33 @@ namespace Benchmarks;
 [MemoryDiagnoser]
 public class PuzzleBenchmarks
 {
-    private readonly ILogger _logger = new BenchmarkLogger();
-    private readonly string _path = Utils.FullPath(16);
+    private readonly ILogger _logger;
+    private readonly string _path;
+    private readonly Puzzle _puzzle;
 
-    //[GlobalSetup]
-    //public void Setup()
-    //{
-    //}
+    public PuzzleBenchmarks()
+    {
+        _logger = new BenchmarkLogger();
+        _path = Utils.FullPath(17); // Update here
+        _puzzle = new Day17(_logger, _path); // and here
+    }
+
+    [GlobalSetup]
+    public void GlobalSetup() => _puzzle.Setup();
 
     [Benchmark]
-    public void MyPuzzle()
+    public void Setup() => _puzzle.Setup(); // verify this won't mess up any _puzzle internal state
+
+    [Benchmark]
+    public void Part1() => _puzzle.SolvePart1();
+
+    [Benchmark]
+    public void Part2() => _puzzle.SolvePart2();
+
+    [Benchmark]
+    public void FullPuzzle()
     {
-        var puzzle = new Day16(_logger, _path);
+        var puzzle = new Day17(_logger, _path); // Update Here
         puzzle.Setup();
         puzzle.SolvePart1();
         puzzle.SolvePart2();
