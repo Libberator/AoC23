@@ -20,8 +20,8 @@ public class PuzzleBenchmarks
     [GlobalSetup]
     public void GlobalSetup() => _puzzle.Setup();
 
-    [Benchmark]
-    public void Setup() => _puzzle.Setup(); // verify this won't mess up any _puzzle internal state
+    //[Benchmark]
+    //public void Setup() => _puzzle.Setup(); // verify this won't mess up any _puzzle internal state
 
     [Benchmark]
     public void Part1() => _puzzle.SolvePart1();
