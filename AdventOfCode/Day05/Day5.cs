@@ -90,8 +90,8 @@ public class Day5(ILogger logger, string path) : Puzzle(logger, path)
         mapped.Add(range);
     }
 
-    public class Map : List<Mapping> { }
-    public record struct Mapping(long Destination, long Source, long Length)
+    private class Map : List<Mapping> { }
+    private record struct Mapping(long Destination, long Source, long Length)
     {
         public readonly long Offset = Destination - Source;
         public readonly bool IsInRange(long value) => value >= Source && value < Source + Length;
@@ -102,5 +102,5 @@ public class Day5(ILogger logger, string path) : Puzzle(logger, path)
             return overlapStart < overlapEnd;
         }
     }
-    public record struct Range(long Start, long End); // Start is Inclusive, End is Exclusive
+    private record struct Range(long Start, long End); // Start is Inclusive, End is Exclusive
 }
