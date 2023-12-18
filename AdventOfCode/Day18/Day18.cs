@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace AoC;
 
-public class Day18(ILogger logger, string path) : Puzzle(logger, path)
+public partial class Day18(ILogger logger, string path) : Puzzle(logger, path)
 {
+    private record struct Instruction(Vector2Long Direction, long Value);
+
     private readonly List<Instruction> _instructions = [];
     private readonly List<Instruction> _hexInstructions = [];
 
@@ -27,107 +27,40 @@ public class Day18(ILogger logger, string path) : Puzzle(logger, path)
             _hexInstructions.Add(hexInstruction);
         }
 
-        static Vector2Int Direction(char input) => input switch
+        static Vector2Long Direction(char input) => input switch
         {
-            'R' or '0' => Vector2Int.E,
-            'D' or '1' => Vector2Int.S,
-            'L' or '2' => Vector2Int.W,
-            'U' or '3' => Vector2Int.N,
+            'R' or '0' => Vector2Long.E,
+            'D' or '1' => Vector2Long.S,
+            'L' or '2' => Vector2Long.W,
+            'U' or '3' => Vector2Long.N,
             _ => throw new IndexOutOfRangeException()
         };
     }
 
-    public override void SolvePart1()
+    public override void SolvePart1() => _logger.Log(CalculatePolygonArea(_instructions));
+
+    public override void SolvePart2() => _logger.Log(CalculatePolygonArea(_hexInstructions));
+
+    // this uses a slightly adjusted shoelace formula: https://en.wikipedia.org/wiki/Shoelace_formula
+    private static long CalculatePolygonArea(List<Instruction> instructions)
     {
-        //long edgeTotal = 0;
-        var pos = Vector2Int.Zero;
+        long area = 0;
+        long perimeter = 0;
+        var prev = Vector2Long.Zero;
 
-        HashSet<Vector2Int> edges = [pos];
-        HashSet<Vector2Int> inside = [];
-        var prevDirection = Vector2Int.Zero;
-
-        foreach (var instruction in _hexInstructions)
+        foreach (var instruction in instructions)
         {
-            //edgeTotal += instruction.Value;
+            var curr = prev + instruction.Direction * instruction.Value; // get next vertex
 
-            bool turnedLeft = prevDirection.RotateLeft() == instruction.Direction;
-            var right = instruction.Direction.RotateRight();
-
-            if (turnedLeft)
-            {
-                // we turned left
-                var corner = pos - instruction.Direction + right;
-                inside.Add(corner);
-            }
-
-            for (var i = 0; i < instruction.Value; i++)
-            {
-                var prevInnerPos = pos + right;
-                inside.Add(prevInnerPos);
-
-                var nextPos = pos + instruction.Direction; // actual edge
-                edges.Add(nextPos);
-
-                var innerPos = nextPos + right;
-                inside.Add(innerPos);
-
-                //var lastInnerPos = innerPos + instruction.Direction;
-                //edges.Add(lastInnerPos);
-
-                pos = nextPos;
-            }
-
-            prevDirection = instruction.Direction;
+            area += prev.X * curr.Y - curr.X * prev.Y;
+            perimeter += Math.Abs(prev.Y - curr.Y + prev.X - curr.X);
+            
+            prev = curr;
         }
 
-        // Fill the inside up
-        inside.RemoveWhere(edges.Contains);
-
-        int insideCount = inside.Count;
-
-        var minY = inside.Min(v => v.Y);
-        var maxY = inside.Max(v => v.Y);
-        var minX = inside.Min(v => v.X);
-        var maxX = inside.Max(v => v.X);
-        
-        
-        for (int y = maxY; y >= minY; y--) // top to bottom
-        {
-            var insidePointAlongRow = inside.Where(v => v.Y == y).OrderBy(v => v.X).ToArray();
-            var edgesAlongRow = edges.Where(v => v.Y == y).ToArray();
-
-            for (int i = 0; i < insidePointAlongRow.Length - 1; i++)
-            {
-                var left = insidePointAlongRow[i];
-                var right = insidePointAlongRow[i + 1];
-
-                if (edgesAlongRow.Any(v => v.X > left.X && v.X < right.X))
-                    continue;
-
-                // nothing in-between these two. Fill in the empty space
-                insideCount += right.X - left.X - 1;
-            }
-        }
-
-        int total = edges.Count + insideCount;
-        _logger.Log(total);
+        // regular shoelace formula would be: totalArea = Math.Abs(area) / 2;
+        // but we add half the perimiter and 1 to adjusted for off-by-1 counting
+        // Example: a Square from (0,0) to (2,2) should be an area of 9, whereas original formula would give 4
+        return (Math.Abs(area) + perimeter) / 2 + 1;
     }
-
-    private void Floodfill(Vector2Int seed, HashSet<Vector2Int> edges, HashSet<Vector2Int> inside)
-    {
-        foreach (var neighbor in Vector2Int.CardinalDirections)
-        {
-            var pos = seed + neighbor;
-            if (edges.Contains(pos) || inside.Contains(pos)) continue;
-            inside.Add(pos);
-            Floodfill(pos, edges, inside);
-        }
-    }
-
-    public override void SolvePart2()
-    {
-        _logger.Log("Part 2 Answer");
-    }
-
-    private record struct Instruction(Vector2Int Direction, long Value);
 }

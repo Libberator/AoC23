@@ -13,8 +13,8 @@ public class PuzzleBenchmarks
     public PuzzleBenchmarks()
     {
         _logger = new BenchmarkLogger();
-        _path = Utils.FullPath(17); // Update here
-        _puzzle = new Day17(_logger, _path); // and here
+        _path = Utils.FullPath(18); // Update here
+        _puzzle = new Day18(_logger, _path); // and here
     }
 
     [GlobalSetup]
@@ -32,7 +32,7 @@ public class PuzzleBenchmarks
     [Benchmark]
     public void FullPuzzle()
     {
-        var puzzle = new Day17(_logger, _path); // Update Here
+        var puzzle = new Day18(_logger, _path); // Update Here
         puzzle.Setup();
         puzzle.SolvePart1();
         puzzle.SolvePart2();
