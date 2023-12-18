@@ -33,8 +33,6 @@ public class Day17(ILogger logger, string path) : Puzzle(logger, path)
                 return current.HeatLoss;
             }
 
-            if (!seen.Add(current.Snapshot())) continue; // avoid endless loops
-
             foreach (var dir in Vector2Int.CardinalDirections)
             {
                 if (dir == -current.Dir) continue; // don't turn around
@@ -43,15 +41,19 @@ public class Day17(ILogger logger, string path) : Puzzle(logger, path)
                 if (!IsInGrid(grid, nextPos)) continue;
 
                 var heatLoss = current.HeatLoss + grid[nextPos.X][nextPos.Y];
-                if (dir == current.Dir || current.Dir == Vector2Int.Zero) // going in same direction
+                if (dir == current.Dir || current.Dir == Vector2Int.Zero) // forward
                 {
                     if (current.Consecutive >= maxConsective) continue;
-                    toSearch.Enqueue(new Node(nextPos, dir, current.Consecutive + 1, heatLoss), heatLoss);
+                    var forward = new Node(nextPos, dir, current.Consecutive + 1, heatLoss);
+                    if (!seen.Add(forward.Snapshot())) continue;
+                    toSearch.Enqueue(forward, heatLoss);
                 }
-                else // turning left or right
+                else // left or right
                 {
                     if (current.Consecutive < minConsecutive) continue;
-                    toSearch.Enqueue(new Node(nextPos, dir, 1, heatLoss), heatLoss);
+                    var leftOrRight = new Node(nextPos, dir, 1, heatLoss);
+                    if (!seen.Add(leftOrRight.Snapshot())) continue;
+                    toSearch.Enqueue(leftOrRight, heatLoss);
                 }
             }
         }
