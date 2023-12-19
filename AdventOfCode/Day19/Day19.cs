@@ -69,7 +69,7 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
     public override void SolvePart2()
     {
         var range = new Range(1, 4000);
-        var partRange = new PartRange(x: range, m: range, a: range, s: range);
+        var partRange = new PartRange(X: range, M: range, A: range, S: range);
         List<PartRange> validRanges = [];
 
         ProcessRange(partRange, _workflows[START], validRanges);
@@ -159,9 +159,8 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
             (left, right) = (new Range(Start, value), new Range(value + 1, End));
     }
 
-    private struct PartRange(Range x, Range m, Range a, Range s)
+    private record struct PartRange(Range X, Range M, Range A, Range S)
     {
-        public Range X = x, M = m, A = a, S = s;
         public readonly long Total => X.Length * M.Length * A.Length * S.Length;
 
         public Range this[char letter]
