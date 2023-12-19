@@ -16,13 +16,14 @@ public partial class Day18(ILogger logger, string path) : Puzzle(logger, path)
     {
         foreach (var line in ReadFromFile())
         {
-            var matched = Regex.Match(line, @"([UDRL])\s(\d+)\s\(#(\w+)\)");
+            var match = Regex.Match(line, @"([DLRU])\s(\d+)\s\(#(\w+)\)");
+            var letter = match.Groups[1].Value[0]; // as char
+            var number = match.Groups[2].Value;
+            var hex = match.Groups[3].Value;
 
-            var instruction = new Instruction(Direction(matched.Groups[1].Value[0]), 
-                int.Parse(matched.Groups[2].Value));
+            var instruction = new Instruction(Direction(letter), long.Parse(number));
             _instructions.Add(instruction);
 
-            var hex = matched.Groups[3].Value;
             var hexInstruction = new Instruction(Direction(hex[^1]), Convert.ToInt64(hex[..^1], 16));
             _hexInstructions.Add(hexInstruction);
         }
@@ -44,23 +45,22 @@ public partial class Day18(ILogger logger, string path) : Puzzle(logger, path)
     // this uses a slightly adjusted shoelace formula: https://en.wikipedia.org/wiki/Shoelace_formula
     private static long CalculatePolygonArea(List<Instruction> instructions)
     {
-        long area = 0;
+        long shoelaceArea = 0;
         long perimeter = 0;
         var prev = Vector2Long.Zero;
 
         foreach (var instruction in instructions)
         {
-            var curr = prev + instruction.Direction * instruction.Value; // get next vertex
+            var curr = prev + instruction.Direction * instruction.Value; // next vertex
 
-            area += prev.X * curr.Y - curr.X * prev.Y;
-            perimeter += Math.Abs(prev.Y - curr.Y + prev.X - curr.X);
+            shoelaceArea += prev.X * curr.Y - curr.X * prev.Y;
+            perimeter += instruction.Value;
             
             prev = curr;
         }
 
-        // regular shoelace formula would be: totalArea = Math.Abs(area) / 2;
-        // but we add half the perimiter and 1 to adjusted for off-by-1 counting
-        // Example: a Square from (0,0) to (2,2) should be an area of 9, whereas original formula would give 4
-        return (Math.Abs(area) + perimeter) / 2 + 1;
+        shoelaceArea = Math.Abs(shoelaceArea) / 2;
+        // we add half the perimiter and 1 to adjusted for formula not including the lower bounds
+        return shoelaceArea + perimeter / 2 + 1;
     }
 }
