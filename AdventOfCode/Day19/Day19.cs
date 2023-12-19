@@ -49,8 +49,7 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
             int value = int.Parse(match.Groups[1].Value);
             string passResult = match.Groups[2].Value;
 
-            var condition = new Condition(letter, isGreaterThan, value, passResult);
-            workflow.Conditions.Add(condition);
+            workflow.Add(new Condition(letter, isGreaterThan, value, passResult));
         }
     }
 
@@ -70,7 +69,7 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
     public override void SolvePart2()
     {
         var range = new Range(1, 4000);
-        var partRange = new PartRange(range, range, range, range);
+        var partRange = new PartRange(x: range, m: range, a: range, s: range);
         List<PartRange> validRanges = [];
 
         ProcessRange(partRange, _workflows[START], validRanges);
@@ -80,7 +79,7 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
 
     private bool IsAcceptedPart(Part part, Workflow workflow)
     {
-        foreach (var condition in workflow.Conditions)
+        foreach (var condition in workflow)
         {
             if (condition.Passes(part))
             {
@@ -103,23 +102,19 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
 
     private void ProcessRange(PartRange fail, Workflow workflow, List<PartRange> validRanges)
     {
-        foreach (var condition in workflow.Conditions)
+        foreach (var condition in workflow)
         {
-            var pass = fail; // copy current failing version
-            var letter = condition.Letter; // use as an indexer
+            var letter = condition.Letter; // used as an indexer
 
+            Range failRange, passRange; // For splitting into two ranges
             if (condition.IsGreaterThan)
-            {
-                fail[letter].Split(condition.Value, out var failRange, out var passRange);
-                fail[letter] = failRange;
-                pass[letter] = passRange;
-            }
+                fail[letter].Split(condition.Value, out failRange, out passRange);
             else
-            {
-                fail[letter].Split(condition.Value - 1, out var passRange, out var failRange);
-                fail[letter] = failRange;
-                pass[letter] = passRange;
-            }
+                fail[letter].Split(condition.Value - 1, out passRange, out failRange);
+
+            var pass = fail; // copy current failing version
+            pass[letter] = passRange;
+            fail[letter] = failRange;
 
             if (condition.PassResult == ACCEPTED)
                 validRanges.Add(pass);
@@ -133,9 +128,8 @@ public class Day19(ILogger logger, string path) : Puzzle(logger, path)
             ProcessRange(fail, _workflows[workflow.FailResult], validRanges);
     }
 
-    private class Workflow(string failResult)
+    private class Workflow(string failResult) : List<Condition>
     {
-        public readonly List<Condition> Conditions = [];
         public readonly string FailResult = failResult;
     }
 
