@@ -9,9 +9,8 @@ public class Day20(ILogger logger, string path) : Puzzle(logger, path)
     private const string START = "broadcaster", END = "rx";
     private const char FLIP_FLOP = '%', CONJUNCTION = '&';
 
-    private readonly Dictionary<string, IModule> _modules = [];
-    private readonly HashSet<string> _stateCache = [];
-    private string[] _nextToLast = [];
+    private readonly Dictionary<string, Module> _modules = [];
+    private string[] _gateKeepers = [];
 
     public override void Setup()
     {
@@ -30,34 +29,33 @@ public class Day20(ILogger logger, string path) : Puzzle(logger, path)
                 _modules.Add(START, new Broadcaster(START, dest));
         }
 
-        foreach (var kvp in _modules)
+        foreach (var module in _modules.Values)
         {
-            var id = kvp.Key;
             var inputs = _modules
-                .Where(kvp => kvp.Value.Outputs.Contains(id))
+                .Where(kvp => kvp.Value.Outputs.Contains(module.Id))
                 .Select(kvp => kvp.Key).ToArray();
-            kvp.Value.AddInputConnections(inputs);
+            module.AddInputConnections(inputs);
         }
 
-        _nextToLast = _modules.Values.FirstOrDefault(mod => mod.Outputs.Contains(END))?.Inputs ?? [];
+        _gateKeepers = _modules.Values.First(mod => mod.Outputs.Contains(END)).Inputs;
     }
 
     public override void SolvePart1()
     {
+        Setup(); // Reset State for benchmarks
+
         for (int i = 0; i < 1000; i++)
             PressButton();
 
         long lowPulseCount = 1000 + _modules.Values.Sum(m => m.LowPulsesSent);
         long highPulseCount = _modules.Values.Sum(m => m.HighPulsesSent);
-
         _logger.Log(lowPulseCount * highPulseCount);
     }
 
     public override void SolvePart2()
     {
-        Setup(); // Reset State
-        var nextToRxModule = _modules.Values.First(m => m.Outputs.Contains(END)).Inputs.Select(i => _modules[i]).ToArray();
-        long[] periods = new long[nextToRxModule.Length];
+        Setup(); // Reset State for benchmarks
+        long[] periods = new long[_gateKeepers.Length];
         int i = 0;
 
         long buttonPresses = 0;
@@ -68,107 +66,76 @@ public class Day20(ILogger logger, string path) : Puzzle(logger, path)
                 periods[i++] = buttonPresses;
         }
 
-        _logger.Log(periods.Product());
+        _logger.Log(periods.Product()); // Least Common Multiple
     }
 
     private bool PressButton()
     {
-        bool newEndStateEncountered = false;
-        List<string> processBuffer = [START];
-        while (processBuffer.Count > 0)
+        bool hitNewEndState = false;
+        Queue<string> processing = new();
+        processing.Enqueue(START);
+
+        while (processing.Count > 0)
         {
-            Queue<string> processing = new(processBuffer);
-            processBuffer.Clear();
+            var source = processing.Dequeue();
+            var module = _modules[source];
+            var outputState = module.State;
 
-            while (processing.Count > 0)
+            if (outputState)
             {
-                var source = processing.Dequeue();
-                var module = _modules[source];
-                var outputState = module.State;
+                module.HighPulsesSent += module.Outputs.Length;
 
-                if (outputState && _nextToLast.Contains(source))
-                    newEndStateEncountered = true;
+                if (_gateKeepers.Contains(source))
+                    hitNewEndState = true;
+            }
+            else
+                module.LowPulsesSent += module.Outputs.Length;
 
-                foreach (var next in module.Outputs)
-                {
-                    if (outputState)
-                        module.HighPulsesSent++;
-                    else
-                        module.LowPulsesSent++;
+            foreach (var nextID in module.Outputs)
+            {
+                if (!_modules.TryGetValue(nextID, out var nextModule))
+                    continue;
 
-                    if (!_modules.TryGetValue(next, out var nextModule))
-                        continue;
-
-                    bool shouldContinue = nextModule.ProcessPulse(source, outputState);
-
-                    if (shouldContinue == true)
-                        processBuffer.Add(next);
-                }
+                nextModule.ProcessPulse(source, outputState);
+                if (!outputState || nextModule is Conjunction)
+                    processing.Enqueue(nextID);
             }
         }
-        return newEndStateEncountered;
+        return hitNewEndState;
     }
 
-    private class Broadcaster(string id, string[] destinations) : IModule
-    {
-        public string Id { get; } = id;
-        public string[] Inputs { get; } = []; // empty
-        public string[] Outputs { get; } = destinations;
-        public long HighPulsesSent { get; set; }
-        public long LowPulsesSent { get; set; }
-        public bool State { get; private set; } = false; // default low
-        public void AddInputConnections(string[] inputs) { } // this will be empty
-        public bool ProcessPulse(string source, bool pulse) => true;
-    }
+    private class Broadcaster(string id, string[] outputs) : Module(id, outputs) { }
 
-    private class FlipFlop(string id, string[] destinations) : IModule
+    private class FlipFlop(string id, string[] outputs) : Module(id, outputs)
     {
-        public string Id { get; } = id;
-        public string[] Inputs { get; private set; } = [];
-        public string[] Outputs { get; } = destinations;
-        public long HighPulsesSent { get; set; }
-        public long LowPulsesSent { get; set; }
-        public bool State { get; private set; } = false; // default low
-
-        public void AddInputConnections(string[] inputs) => Inputs = inputs;
-        public bool ProcessPulse(string source, bool pulse)
+        public override void ProcessPulse(string source, bool pulse)
         {
-            if (pulse) return false; // ignore high pulses
-            State = !State; // toggle on low pulses
-            return true;
+            if (!pulse) State = !State; // toggle on low pulses
         }
     }
 
-    private class Conjunction(string id, string[] destinations) : IModule
+    private class Conjunction(string id, string[] outputs) : Module(id, outputs)
     {
-        public string Id { get; } = id;
-        public string[] Inputs { get; private set; } = [];
-        public string[] Outputs { get; } = destinations;
-        public long HighPulsesSent { get; set; }
-        public long LowPulsesSent { get; set; }
-        public bool State => !InputStates.All(p => p);
-        public bool[] InputStates = [];
-        public void AddInputConnections(string[] inputs)
+        public override bool State => !_inputStates.All(p => p);
+        private bool[] _inputStates = []; // defaults to all false
+        public override void AddInputConnections(string[] inputs)
         {
-            Inputs = inputs;
-            InputStates = new bool[inputs.Length]; // defaults to false
+            base.AddInputConnections(inputs);
+            _inputStates = new bool[inputs.Length];
         }
-        public bool ProcessPulse(string source, bool pulse)
-        {
-            InputStates[Array.IndexOf(Inputs, source)] = pulse;
-            return true;
-        }
+        public override void ProcessPulse(string source, bool pulse) =>
+            _inputStates[Array.IndexOf(Inputs, source)] = pulse;
     }
 
-    private interface IModule
+    private abstract class Module(string id, string[] outputs)
     {
-        string Id { get; }
-        string[] Inputs { get; }
-        string[] Outputs { get; }
-        long HighPulsesSent { get; set; }
-        long LowPulsesSent { get; set; }
-        public bool State { get; }
-        void AddInputConnections(string[] inputs);
-        bool ProcessPulse(string source, bool pulse);
+        public string Id { get; } = id;
+        public string[] Outputs { get; } = outputs;
+        public string[] Inputs { get; protected set; } = [];
+        public long HighPulsesSent { get; set; }
+        public long LowPulsesSent { get; set; }
+        public virtual bool State { get; protected set; }
+        public virtual void AddInputConnections(string[] inputs) => Inputs = inputs;
+        public virtual void ProcessPulse(string source, bool pulse) { }
     }
 }
