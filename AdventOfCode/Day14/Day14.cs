@@ -18,10 +18,9 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
     public override void Setup()
     {
         foreach (var line in ReadFromFile())
-        {
             _grid.Add(line.Select(MapCharToTile).ToList());
-            _size++;
-        }
+
+        _size = _grid.Count;
 
         static Tile MapCharToTile(char c) => c switch
         {
@@ -74,16 +73,16 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         _cache.Add(hash);
         return false;
 
-        int GetHash(List<List<Tile>> grid)
+        static int GetHash(List<List<Tile>> grid)
         {
-            int hash = 0;
-            for (int row = 0; row < grid.Count; row++)
+            int hash = 0, rows = grid.Count;
+            for (int row = 0; row < rows; row++)
             {
                 var rowTiles = grid[row];
                 for (int col = 0; col < rowTiles.Count; col++)
                 {
                     if (rowTiles[col] != Tile.Round) continue;
-                    hash ^= 1 << ((row * _size + col) % 32); // XOR hash approach
+                    hash ^= 1 << ((row * rows + col) & 31); // XOR hash approach
                 }
             }
             return hash;
@@ -96,8 +95,22 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
         _grid[toRow][toCol] = Tile.Round;
     }
 
+    private void MoveTileNorth(int i, int from, int to) => MoveTile(from, i, to, i);
+    private void MoveTileWest(int i, int from, int to) => MoveTile(i, from, i, to);
+    private void MoveTileSouth(int i, int from, int to) => MoveTile(_size - 1 - from, i, _size - 1 - to, i);
+    private void MoveTileEast(int i, int from, int to) => MoveTile(i, _size - 1 - from, i, _size - 1 - to);
+
     private void Shift(List<List<Tile>> grid, Direction dir)
     {
+        Action<int, int, int> moveAction = dir switch
+        {
+            Direction.North => MoveTileNorth,
+            Direction.West => MoveTileWest,
+            Direction.South => MoveTileSouth,
+            Direction.East => MoveTileEast,
+            _ => throw new IndexOutOfRangeException()
+        };
+
         Parallel.For(0, _size, i =>
         {
             var tiles = dir switch
@@ -109,36 +122,32 @@ public class Day14(ILogger logger, string path) : Puzzle(logger, path)
                 _ => throw new IndexOutOfRangeException(),
             };
 
-            var nextCubeIndex = tiles.IndexOf(Tile.Cube);
-            if (nextCubeIndex == -1) nextCubeIndex = _size;
+            var nextCubeIndex = -1;
+            GetNextCubeIndex(tiles, ref nextCubeIndex);
 
             for (int j = 0; j < _size; j++)
             {
                 if (j == nextCubeIndex)
                 {
-                    nextCubeIndex = tiles.FindIndex(nextCubeIndex + 1, t => t == Tile.Cube);
-                    if (nextCubeIndex == -1) nextCubeIndex = _size;
+                    GetNextCubeIndex(tiles, ref nextCubeIndex);
                     continue;
                 }
 
-                if (tiles[j] == Tile.Round) continue;
-
-                var indicesToShift = Enumerable.Range(j, nextCubeIndex - j).Where(j => tiles[j] == Tile.Round);
-
-                foreach (var index in indicesToShift)
+                for (int fromIndex = j; fromIndex < nextCubeIndex; fromIndex++)
                 {
-                    switch (dir)
-                    {
-                        case Direction.North: MoveTile(index, i, j, i); break;
-                        case Direction.West: MoveTile(i, index, i, j); break;
-                        case Direction.South: MoveTile(_size - 1 - index, i, _size - 1 - j, i); break;
-                        case Direction.East: MoveTile(i, _size - 1 - index, i, _size - 1 - j); break;
-                        default: break;
-                    }
+                    if (tiles[fromIndex] != Tile.Round) continue;
+                    moveAction(i, fromIndex, j);
                     j++;
                 }
+
                 j = nextCubeIndex - 1;
             }
         });
+
+        static void GetNextCubeIndex(List<Tile> tiles, ref int nextCubeIndex)
+        {
+            nextCubeIndex = tiles.FindIndex(nextCubeIndex + 1, t => t == Tile.Cube);
+            if (nextCubeIndex == -1) nextCubeIndex = tiles.Count;
+        }
     }
 }

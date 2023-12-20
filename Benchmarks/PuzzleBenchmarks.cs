@@ -6,22 +6,16 @@ namespace Benchmarks;
 [MemoryDiagnoser]
 public class PuzzleBenchmarks
 {
-    private readonly ILogger _logger;
-    private readonly string _path;
+    private readonly ILogger _logger = new BenchmarkLogger();
+    private readonly string _path = Utils.FullPath(14); // Update here
     private readonly Puzzle _puzzle;
-
-    public PuzzleBenchmarks()
-    {
-        _logger = new BenchmarkLogger();
-        _path = Utils.FullPath(18); // Update here
-        _puzzle = new Day18(_logger, _path); // and here
-    }
+    public PuzzleBenchmarks() => _puzzle = new Day14(_logger, _path); // and here
 
     [GlobalSetup]
     public void GlobalSetup() => _puzzle.Setup();
 
-    //[Benchmark]
-    //public void Setup() => _puzzle.Setup(); // verify this won't mess up any _puzzle internal state
+    [Benchmark]
+    public void Setup() => _puzzle.Setup(); // Be sure to reset the state at start of method
 
     [Benchmark]
     public void Part1() => _puzzle.SolvePart1();
@@ -29,14 +23,13 @@ public class PuzzleBenchmarks
     [Benchmark]
     public void Part2() => _puzzle.SolvePart2();
 
-    [Benchmark]
-    public void FullPuzzle()
-    {
-        var puzzle = new Day18(_logger, _path); // Update Here
-        puzzle.Setup();
-        puzzle.SolvePart1();
-        puzzle.SolvePart2();
-    }
+    //[Benchmark]
+    //public void FullPuzzle()
+    //{
+    //    //_puzzle.Setup(); // the I/O slows down results significantly
+    //    _puzzle.SolvePart1();
+    //    _puzzle.SolvePart2();
+    //}
 }
 
 public class BenchmarkLogger : ILogger
