@@ -6,6 +6,7 @@ namespace AoC;
 
 public class Day22(ILogger logger, string path) : Puzzle(logger, path)
 {
+    //private readonly List<Brick> _bricks = [];
     private readonly List<Bounds3D> _bricks = [];
 
     public override void Setup()
@@ -18,6 +19,7 @@ public class Day22(ILogger logger, string path) : Puzzle(logger, path)
             _bricks.Add(new Bounds3D(left[0], right[0], left[1], right[1], left[2], right[2]));
         }
         SlideAllBricksDown();
+        // TODO: initialize connections - Supports vs SupportedBy (come up with better List names)
     }
 
     public override void SolvePart1() => _logger.Log(_bricks.Count(CanBeDisintegrated));
@@ -106,5 +108,12 @@ public class Day22(ILogger logger, string path) : Puzzle(logger, path)
             total += DisintegrateBrick(next, moved);
 
         return total;
+    }
+
+    private class Brick(Bounds3D bounds)
+    {
+        public Bounds3D Bounds { get; private set; } = bounds;
+        public readonly List<Brick> Above = [];
+        public readonly List<Brick> Below = [];
     }
 }
