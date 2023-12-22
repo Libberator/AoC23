@@ -6,12 +6,12 @@ namespace AoC;
 
 public struct Bounds3D
 {
-    public int XMin { get; private set; }
-    public int XMax { get; private set; }
-    public int YMin { get; private set; }
-    public int YMax { get; private set; }
-    public int ZMin { get; private set; }
-    public int ZMax { get; private set; }
+    public int XMin { get; set; }
+    public int XMax { get; set; }
+    public int YMin { get; set; }
+    public int YMax { get; set; }
+    public int ZMin { get; set; }
+    public int ZMax { get; set; }
 
     public Bounds3D() : this(0, 0, 0, 0, 0, 0) { }
 

@@ -25,21 +25,71 @@ public class Day21(ILogger logger, string path) : Puzzle(logger, path)
         }
     }
 
-    public override void SolvePart1()
-    {
-        int steps = 64;
-        var (even, _) = TakeSteps(_grid, _startPos, steps);
-        _logger.Log(even);
-    }
+    public override void SolvePart1() => _logger.Log(TakeSteps(_grid, _startPos, 64).Even);
 
     public override void SolvePart2()
     {
-        int steps = 26501365;
-        var (_, odd) = TakeSteps(_grid, _startPos, steps);
-        _logger.Log(odd);
+        // start: 65, 65
+        // width = 131: 65th spot (1), then 65 on each side (130)
+        // steps / size = 202300 + 65/131
+        // 5 * 11 * 481843
+
+        long steps = 26501365;
+        int size = _grid.Length; // 131, odd-sized square -> more evens than odds
+        
+        // -------- FULL GRIDS ------------
+        // fill up the grid to get the even and odd distributions
+        var stepsToFillFromCenter = size - 1; // ignoring starting point, step 65 laterally, then 65 more to the corner
+        // _startPos is at the center of the grid
+        var (even, odd) = TakeSteps(_grid, _startPos, stepsToFillFromCenter); // 7566, 7509 (total: 15075)
+
+        // figure out how many total grids get filled up - split into even and odd grids
+        long gridsTraversedWidth = (steps - (size / 2)) / size; // 202,300
+        var fullOddGrids = gridsTraversedWidth * gridsTraversedWidth; // 40925290000
+        var fullEvenGrids = (gridsTraversedWidth - 1) * (gridsTraversedWidth - 1); // 40924885401
+
+        // --------- PARTIAL GRIDS ------------
+        // partially fill up the 4 tips of the furthest traveled diamond corners
+        var partialTop = TakeSteps(_grid, new Vector2Int(_startPos.X, size - 1), size - 1).Even;
+        var partialRight = TakeSteps(_grid, new Vector2Int(0, _startPos.Y), size - 1).Even;
+        var partialBottom = TakeSteps(_grid, new Vector2Int(_startPos.X, 0), size - 1).Even;
+        var partialLeft = TakeSteps(_grid, new Vector2Int(size - 1, _startPos.Y), size - 1).Even;
+
+
+
+
+
+        var total = fullEvenGrids * even + fullOddGrids * odd;
+
+        long remainingSteps = size / 2 + steps % size;
+
+        // 15066 (130), 14839 (129) +227
+        // full grid has (7566 even, 7509 odd: 15075 total) plots out of 17161
+
+
+        var startFromUpperLeftCorner = Vector2Int.Zero;
+        var stepsToFillFromCorner = 2 * stepsToFillFromCenter;
+        var (cornereven, cornerodd) = TakeSteps(_grid, startFromUpperLeftCorner, stepsToFillFromCorner);
+
+        int[] runs = new int[] { 55, 65, 121, 128, 129, 130, 165, 195 };
+        // 55 * 1, 2, 3
+        // 55 * 481 843
+        long[] results = new long[runs.Length];
+
+        for (int i = 0; i < runs.Length; i++)
+        {
+            var step = runs[i];
+            var (even2, odd2) = TakeSteps(_grid, _startPos, step);
+            Console.WriteLine($"{step}. Even: {even2}, Odd: {odd2}");
+            results[i] = step % 2 == 0 ? even2 : odd2;
+        }
+
+        //var odd = 0;
+        //var (_, odd) = TakeSteps(_grid, _startPos, steps);
+        _logger.Log(0);
     }
 
-    private static (long evenPlots, long oddPlots) TakeSteps(string[] grid, Vector2Int startPos, int steps)
+    private static (long Even, long Odd) TakeSteps(string[] grid, Vector2Int startPos, int steps)
     {
         long totalEvenPlots = 1;
         long totalOddPlots = 0;
@@ -52,7 +102,7 @@ public class Day21(ILogger logger, string path) : Puzzle(logger, path)
             if (i % 2 == 0) totalEvenPlots += newPlots;
             else totalOddPlots += newPlots;
 
-            if (i % 64 == 0 || i % 65 == 0 || i % 66 == 0)
+            if (i % 100_000 == 0)
             {
                 Console.WriteLine($"{i}. even: {totalEvenPlots}, odd: {totalOddPlots}");
             }
@@ -85,9 +135,12 @@ public class Day21(ILogger logger, string path) : Puzzle(logger, path)
 
     private static bool CanVisit(Vector2Int nextPos, string[] grid)
     {
-        var xPos = nextPos.X.Mod(grid.Length); // loops around
-        var ypos = nextPos.Y.Mod(grid[0].Length);
+        if (nextPos.X <0 || nextPos.Y <0) return false;
+        if (nextPos.X >= grid.Length || nextPos.Y >= grid[0].Length) return false;
 
-        return grid[xPos][ypos] != ROCK;
+        return grid[nextPos.X][nextPos.Y] != ROCK;
+        //var xPos = nextPos.X.Mod(grid.Length); // loops around
+        //var ypos = nextPos.Y.Mod(grid[0].Length);
+        //return grid[xPos][ypos] != ROCK;
     }
 }
