@@ -7,10 +7,10 @@ namespace Benchmarks;
 public class PuzzleBenchmarks
 {
     private readonly ILogger _logger = new BenchmarkLogger();
-    private readonly string _path = Utils.FullPath(20); // Update here
+    private readonly string _path = Utils.FullPath(22); // Update here
     private readonly Puzzle _puzzle;
     
-    public PuzzleBenchmarks() => _puzzle = new Day20(_logger, _path); // and here
+    public PuzzleBenchmarks() => _puzzle = new Day22(_logger, _path); // and here
 
     [GlobalSetup]
     public void GlobalSetup() => _puzzle.Setup();

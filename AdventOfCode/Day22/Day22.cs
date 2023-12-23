@@ -1,119 +1,104 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace AoC;
 
 public class Day22(ILogger logger, string path) : Puzzle(logger, path)
 {
-    //private readonly List<Brick> _bricks = [];
-    private readonly List<Bounds3D> _bricks = [];
+    private readonly List<Brick> _bricks = [];
 
     public override void Setup()
     {
+        _bricks.Clear();
         foreach (var line in ReadFromFile())
         {
             var split = line.Split('~');
             var left = split[0].Split(',').ToIntArray();
             var right = split[1].Split(',').ToIntArray();
-            _bricks.Add(new Bounds3D(left[0], right[0], left[1], right[1], left[2], right[2]));
+            var bounds = new Bounds3D(left[0], right[0], left[1], right[1], left[2], right[2]);
+            _bricks.Add(new Brick(bounds));
         }
-        SlideAllBricksDown();
-        // TODO: initialize connections - Supports vs SupportedBy (come up with better List names)
+        SlideAllBricksDown(); // also applies any connections
     }
 
-    public override void SolvePart1() => _logger.Log(_bricks.Count(CanBeDisintegrated));
+    public override void SolvePart1() => _logger.Log(_bricks.Count(b => b.CanBeDisintegrated()));
 
-    public override void SolvePart2() => _logger.Log(_bricks.Sum(b => DisintegrateBrick(b, [])));
-
-    private void SlideAllBricksDown()
-    {
-        _bricks.Sort((a, b) => a.ZMin.CompareTo(b.ZMin));
-
-        for (int i = 0; i < _bricks.Count; i++)
-        {
-            var brick = _bricks[i];
-            var zMin = brick.ZMin;
-            // check below
-
-            for (int z = zMin - 1; z >= 1; z--)
-            {
-                if (BricksOverlappingSpace(brick, z) > 0)
-                {
-                    break;
-                }
-                zMin = z; // can shift it down
-            }
-            if (zMin != brick.ZMin)
-            {
-                int movedDown = brick.ZMin - zMin;
-                var newBrick = new Bounds3D(brick.XMin, brick.XMax, brick.YMin, brick.YMax, brick.ZMin - movedDown, brick.ZMax - movedDown);
-                _bricks[i] = newBrick;
-            }
-        }
-    }
-
-    private bool CanBeDisintegrated(Bounds3D brick)
-    {
-        var spotAbove = new Bounds3D(brick.XMin, brick.XMax, brick.YMin, brick.YMax, brick.ZMax + 1, brick.ZMax + 1);
-
-        foreach (var b in _bricks.Where(spotAbove.Overlaps))
-        {
-            if (BricksOverlappingSpace(b, b.ZMin - 1) < 2)
-                return false;
-        }
-
-        return true;
-    }
-
-    private int BricksOverlappingSpace(Bounds3D brick, int z)
-    {
-        var space = BoundsWithZ(brick, z);
-        return _bricks.Count(space.Overlaps);
-    }
+    public override void SolvePart2() => _logger.Log(_bricks.Sum(b => b.SupportingTotal()));
 
     private static Bounds3D BoundsWithZ(Bounds3D b, int z) => new(b.XMin, b.XMax, b.YMin, b.YMax, z, z);
 
-    // TODO: start from top, give each brick a number of bricks that would move if it got disintegrated
-
-    // breadth-first exploration of disintegrating and moving bricks
-    private long DisintegrateBrick(Bounds3D brick, HashSet<Bounds3D> moved)
+    private void SlideAllBricksDown()
     {
-        long total = 0;
-        moved.Add(brick);
-        List<Bounds3D> toMoveNext = [];
+        _bricks.Sort((a, b) => a.Bounds.ZMin.CompareTo(b.Bounds.ZMin));
 
-        var spaceAbove = BoundsWithZ(brick, brick.ZMax + 1);
-        foreach (var above in _bricks.Where(spaceAbove.Overlaps))
+        foreach (var brick in _bricks)
         {
-            var belowBrickAbove = BoundsWithZ(above, above.ZMin - 1);
-            bool canMove = true;
-            foreach (var below in _bricks.Where(belowBrickAbove.Overlaps))
+            var zMin = brick.Bounds.ZMin;
+
+            for (int z = zMin - 1; z >= 1; z--)
             {
-                if (!moved.Contains(below))
+                var space = BoundsWithZ(brick.Bounds, z);
+
+                var touchingBelow = _bricks.Where(b => b.Bounds.Overlaps(space)).ToList();
+                if (touchingBelow.Count > 0)
                 {
-                    canMove = false;
+                    foreach (var below in touchingBelow)
+                    {
+                        brick.Below.Add(below);
+                        below.Above.Add(brick);
+                    }
                     break;
                 }
+
+                zMin = z;
             }
-            // can also be safely moved down
-            if (canMove)
-            {
-                total++;
-                toMoveNext.Add(above);
-            }
+            brick.MoveDownBy(brick.Bounds.ZMin - zMin);
         }
-
-        foreach (var next in toMoveNext)
-            total += DisintegrateBrick(next, moved);
-
-        return total;
     }
 
     private class Brick(Bounds3D bounds)
     {
-        public Bounds3D Bounds { get; private set; } = bounds;
-        public readonly List<Brick> Above = [];
-        public readonly List<Brick> Below = [];
+        public Bounds3D Bounds = bounds;
+        public readonly HashSet<Brick> Above = [];
+        public readonly HashSet<Brick> Below = [];
+
+        public bool CanBeDisintegrated()
+        {
+            foreach (var above in Above)
+            {
+                if (above.Below.Count < 2)
+                    return false;
+            }
+            return true;
+        }
+
+        public int SupportingTotal() => FallBrick(this, []);
+
+        public void MoveDownBy(int zDistance)
+        {
+            Bounds.ZMin -= zDistance;
+            Bounds.ZMax -= zDistance;
+        }
+
+        private int FallBrick(Brick disintegrated, HashSet<Brick> moved)
+        {
+            int total = 0;
+            moved.Add(disintegrated);
+            List<Brick> toFallNext = [];
+
+            foreach (var above in disintegrated.Above)
+            {
+                if (moved.IsSupersetOf(above.Below))
+                {
+                    total++;
+                    toFallNext.Add(above);
+                }
+            }
+
+            foreach (var next in toFallNext)
+                total += FallBrick(next, moved);
+
+            return total;
+        }
     }
 }
