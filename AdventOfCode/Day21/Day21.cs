@@ -27,6 +27,7 @@ public class Day21(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart1() => _logger.Log(TakeSteps(_grid, _startPos, 64).Even);
 
+    // TODO: Change to quadratic extrapolation
     public override void SolvePart2()
     {
         long steps = 26501365;

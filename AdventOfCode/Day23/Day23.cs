@@ -25,7 +25,7 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
 
     private void InitializeNodes(Vector2Int start, Vector2Int end)
     {
-        throw new NotImplementedException();
+        //throw new NotImplementedException();
     }
 
     public override void SolvePart1()

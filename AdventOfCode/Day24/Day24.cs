@@ -42,10 +42,8 @@ public class Day24(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart2()
     {
-        // find starting point and starting velocity to "hit" all hailstones
         var startingPos = GetStartingPosition(_hailstones);
-        // add position coordinates together
-        _logger.Log("Part 2 Answer");
+        _logger.Log(startingPos.X + startingPos.Y + startingPos.Z);
     }
 
     // solving for y = mx + b for both.

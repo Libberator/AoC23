@@ -38,8 +38,8 @@ public class Day22(ILogger logger, string path) : Puzzle(logger, path)
             for (int z = zMin - 1; z >= 1; z--)
             {
                 var space = BoundsWithZ(brick.Bounds, z);
-
                 var touchingBelow = _bricks.Where(b => b.Bounds.Overlaps(space)).ToList();
+                // TODO: replace Where check with a for-loop that breaks early once we get past the possible ranges of bricks that could be touching
                 if (touchingBelow.Count > 0)
                 {
                     foreach (var below in touchingBelow)
