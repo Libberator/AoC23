@@ -1,10 +1,10 @@
-﻿namespace System.Numerics;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace System.Numerics;
 
 public struct Vector3Long(long x, long y, long z)
 {
-    public long X = x;
-    public long Y = y;
-    public long Z = z;
+    public long X = x, Y = y, Z = z;
 
     public static readonly Vector3Long Zero = new(0, 0, 0);
     public static readonly Vector3Long Up = new(0, 1, 0);
@@ -17,6 +17,9 @@ public struct Vector3Long(long x, long y, long z)
     public readonly bool Equals(Vector3Long other) => this == other;
     public override readonly bool Equals(object? obj) => obj is Vector3Long other && Equals(other);
     public override readonly int GetHashCode() => HashCode.Combine(X, Y);
+    public string ToString([StringSyntax("NumericFormat")] string format, IFormatProvider formatProvider) => $"{X.ToString(format, formatProvider)}, {Y.ToString(format, formatProvider)}, {Z.ToString(format, formatProvider)}";
+    public readonly override string ToString() => $"{X}, {Y}, {Z}";
+    public readonly string ToString([StringSyntax("NumericFormat")] string format) => $"{X.ToString(format)}, {Y.ToString(format)}, {Z.ToString(format)}";
 
     public static Vector3Long operator +(Vector3Long left, Vector3Long right) => new(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
     public static Vector3Long operator -(Vector3Long value) => new(-value.X, -value.Y, -value.Z);

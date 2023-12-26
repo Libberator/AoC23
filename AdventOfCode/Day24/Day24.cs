@@ -8,6 +8,19 @@ namespace AoC;
 public class Day24(ILogger logger, string path) : Puzzle(logger, path)
 {
     private readonly List<Hailstone> _hailstones = [];
+    private record struct Hailstone(long PosX, long PosY, long PosZ, int VelX, int VelY, int VelZ)
+    {
+        public readonly long this[int i] => i switch
+        {
+            0 => PosX,
+            1 => PosY,
+            2 => PosZ,
+            3 => VelX,
+            4 => VelY,
+            5 => VelZ,
+            _ => throw new IndexOutOfRangeException()
+        };
+    }
 
     public override void Setup()
     {
@@ -23,8 +36,8 @@ public class Day24(ILogger logger, string path) : Puzzle(logger, path)
     public override void SolvePart1()
     {
         int total = 0;
-        long min = 200000000000000; // 7
-        long max = 400000000000000; // 27
+        long min = 200000000000000; // for test, use 7;
+        long max = 400000000000000; // for test, use 27;
 
         for (int i = 0; i < _hailstones.Count - 1; i++)
         {
@@ -42,80 +55,96 @@ public class Day24(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart2()
     {
-        var startingPos = GetStartingPosition(_hailstones);
-        _logger.Log(startingPos.X + startingPos.Y + startingPos.Z);
+        var (Pos, Vel) = GetStartingCondition();
+        _logger.Log(Pos.X + Pos.Y + Pos.Z);
     }
 
-    // solving for y = mx + b for both.
     private static bool WillCollideBetween(Hailstone a, Hailstone b, long min, long max)
     {
-        // this is the "m", or slope, in the equation
-        var slopeA = (double)a.VelY / a.VelX;
-        var slopeB = (double)b.VelY / b.VelX;
+        long determinant = (a.VelY * b.VelX) - (a.VelX * b.VelY);
+        if (determinant == 0) return false; // parallel lines
 
-        if (slopeA == slopeB) return false; // parallel lines
+        var quotient = b.VelX * (b.PosY - a.PosY) - b.VelY * (b.PosX - a.PosX);
+        var t = quotient / determinant;
+        if (t < 0) return false; // in the past
 
-        // the "plus b" in the equation
-        var plusB_A = a.PosY - slopeA * a.PosX;
-        var plusB_B = b.PosY - slopeB * b.PosX;
+        var xIntercept = a.PosX + a.VelX * t;
+        if (xIntercept < min || xIntercept > max) return false; // outside window
+        
+        if (a.VelX > 0 != xIntercept > a.PosX || b.VelX > 0 != xIntercept > b.PosX) return false; // more reliable past check
+        
+        var yIntercept = a.PosY + a.VelY * t;
+        return yIntercept >= min && yIntercept <= max; // true if inside window
+    }
 
-        var xIntercept = (plusB_A - plusB_B) / (slopeB - slopeA);
-        if (xIntercept < min || xIntercept > max) return false; // outside range for x value
+    private (Vector3Long Pos, Vector3Int Vel) GetStartingCondition()
+    {
+        var range = 500;
 
-        if (a.VelX > 0 ^ xIntercept > a.PosX || b.VelX > 0 ^ xIntercept > b.PosX) return false; // in the past
+        // Brute force rock velocities in the XY plane
+        foreach (var x in AlternatingRange(range))
+        {
+            foreach (var y in AlternatingRange(range))
+            {
+                Vector2Int velOffset = new(x, y);
+                // Grab the intersection of the first few hailstone trajectories with their velocities modified by offset
+                if (!TryIntersect(_hailstones[1], _hailstones[0], velOffset, out var pos1, out var t1))
+                    continue;
 
-        var yIntercept = xIntercept * slopeA + plusB_A;
-        if (yIntercept < min || yIntercept > max) return false; // outside range for y value
+                if (!TryIntersect(_hailstones[2], _hailstones[0], velOffset, out var pos2, out var t2))
+                    continue;
+
+                if (pos1 != pos2) continue;
+
+                // Calculate the z interception
+                var z1_before = _hailstones[1].PosZ + t1 * _hailstones[1].VelZ;
+                var z2_before = _hailstones[2].PosZ + t2 * _hailstones[2].VelZ;
+
+                var rockVelZ = (z2_before - z1_before) / (t1 - t2);
+
+                var z1 = z1_before + rockVelZ * t1;
+                var z2 = z2_before + rockVelZ * t2;
+
+                if (z1 == z2)
+                    return (new(pos1.X, pos1.Y, z1), new(x, y, (int)rockVelZ));
+            }
+        }
+
+        return (Vector3Long.Zero, Vector3Int.Zero);
+    }
+
+    private static bool TryIntersect(Hailstone a, Hailstone b, Vector2Int offset, out Vector2Long pos, out long t)
+    {
+        pos = Vector2Long.Zero;
+        t = 0;
+
+        // adjust velocities with offset
+        var (aVelX, aVelY) = (a.VelX + offset.X, a.VelY + offset.Y);
+        var (bVelX, bVelY) = (b.VelX + offset.X, b.VelY + offset.Y);
+
+        long determinant = (aVelY * bVelX) - (aVelX * bVelY);
+
+        if (determinant == 0) return false;
+
+        var quotient = bVelX * (b.PosY - a.PosY) - bVelY * (b.PosX - a.PosX);
+
+        t = quotient / determinant;
+        pos = new Vector2Long(a.PosX + (t * aVelX), a.PosY + (t * aVelY));
+
         return true;
     }
 
-    private Vector3Long GetStartingPosition(List<Hailstone> hailstones)
+    // 0, -1, 1, -2, 2, -3, 3...
+    private static IEnumerable<int> AlternatingRange(int max)
     {
-        var startingPos = Vector3Long.Zero;
-        var startingVel = Vector3Long.Zero;
-
-
-
-
-
-        return startingPos;
+        var i = 0;
+        yield return i;
+        while (i < max)
+        {
+            if (i >= 0)
+                i++;
+            i *= -1;
+            yield return i;
+        }
     }
-
-    private bool PathIntersects(Vector3Long pos,  Hailstone other)
-    {
-
-
-
-        return false;
-    }
-
-    private record struct Hailstone(long PosX, long PosY, long PosZ, int VelX, int VelY, int VelZ);
-
-
 }
-
-
-
-// consider only X and Y axis
-// y1 = mx1 + b1
-// y2 = mx2 + b2
-
-// 19, 13, 30 @ -2, 1, -2
-// 18, 19, 22 @ -1, -1, -2
-// x=14.333, y=15.333
-
-// y = -0.5 x + 22.5
-// y = x + 1
-// 1.5x = 21.5
-// x =  (slope a - slope b)
-// x = 14 1/3
-// y = 15 1/3
-
-// 19, 13, 30 @ -2, 1, -2
-// 20, 25, 34 @ -2, -2, -4
-// x=11.667, y=16.667).
-
-// y = -0.5x + 22.5
-// y = 1x + 5
-// 1.5x = 17.5
-// x = 11.667, y = 16.667
