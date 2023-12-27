@@ -27,35 +27,43 @@ public class Day22(ILogger logger, string path) : Puzzle(logger, path)
 
     private void SlideBricksDown()
     {
-        _bricks.Sort((a, b) => a.Bounds.ZMin.CompareTo(b.Bounds.ZMin)); // sort by the bottoms of each brick
+        _bricks.Sort((a, b) => a.Bottom.CompareTo(b.Bottom)); // sort by the bottoms of each brick
 
-        foreach (var brick in _bricks)
+        for (int i = 0; i < _bricks.Count; i++)
         {
-            var zMin = brick.Bounds.ZMin;
+            var brick = _bricks[i];
+            var zMin = brick.Bottom;
 
             for (int z = zMin - 1; z >= 1; z--)
             {
-                var spaceBelow = brick.Bounds with { ZMin = z, ZMax = z }; // one small slice of 3D space
-
                 bool keepGoingDown = true;
-                foreach (var brickBelow in _bricks)
+                for (int j = 0; j < i; j++)
                 {
-                    if (!brickBelow.Bounds.Overlaps(spaceBelow)) continue; // check the tops of each other brick
+                    var brickBelow = _bricks[j];
+                    if (brickBelow.Top != z) continue;
+                    if (!OverlapsXY(brickBelow, brick)) continue;
                     brick.Below.Add(brickBelow); // add connections if they'll be touching
                     brickBelow.Above.Add(brick);
                     keepGoingDown = false;
                 }
                 if (!keepGoingDown) break;
-
                 zMin = z;
             }
-            brick.MoveDownBy(brick.Bounds.ZMin - zMin); // finally, move brick down
+
+            brick.MoveDownBy(brick.Bottom - zMin); // finally, move brick down
         }
+
+        static bool OverlapsXY(Brick a, Brick b) =>
+            a.Bounds.XMin <= b.Bounds.XMax && b.Bounds.XMin <= a.Bounds.XMax
+            && a.Bounds.YMin <= b.Bounds.YMax && b.Bounds.YMin <= a.Bounds.YMax;
     }
 
     private class Brick(Bounds3D bounds)
     {
         public Bounds3D Bounds = bounds;
+        public int Top => Bounds.ZMax;
+        public int Bottom => Bounds.ZMin;
+
         public readonly HashSet<Brick> Above = [];
         public readonly HashSet<Brick> Below = [];
 
