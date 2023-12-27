@@ -42,19 +42,20 @@ public class Day25(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart1()
     {
-        var product = 0;
         for (int i = 1; i < _nodes.Count; i++)
         {
-            (var flow, product) = MaxFlow(0, i);
+            var (flow, componentSize) = MaxFlow(0, i);
             if (flow <= 3)
+            {
+                _logger.Log(componentSize * (_nodes.Count - componentSize));
                 break;
+            }
         }
-        _logger.Log(product);
     }
 
     public override void SolvePart2() { } // Freebie
 
-    private (int Flow, int Product) MaxFlow(int start, int end)
+    private (int Flow, int ComponentSize) MaxFlow(int start, int end)
     {
         int[,] flow = new int[_nodes.Count, _nodes.Count];
         int flowVal = 0;
@@ -64,7 +65,7 @@ public class Day25(ILogger logger, string path) : Puzzle(logger, path)
             if (componentSize == 0) // augmenting path found
                 flowVal++;
             else  // no more augmenting paths can be found
-                return (flowVal, componentSize * (_nodes.Count - componentSize));
+                return (flowVal, componentSize);
         }
     }
 
