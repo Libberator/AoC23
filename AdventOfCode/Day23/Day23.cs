@@ -37,14 +37,14 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
     public override void SolvePart1()
     {
         var graph = CreateGraph(_nodes, DirectedGraphMapping);
-        var longestPath = FindLongestPath(graph, _start, _end);
+        var longestPath = FindLongestPath(graph, _start);
         _logger.Log(longestPath);
     }
 
     public override void SolvePart2()
     {
         var graph = CreateGraph(_nodes, UndirectedGraphMapping);
-        var longestPath = FindLongestPath(graph, _start, _end);
+        var longestPath = FindLongestPath(graph, _start);
         _logger.Log(longestPath);
     }
 
@@ -95,9 +95,9 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
     private static Vector2Int[] UndirectedGraphMapping(char _) => Vector2Int.CardinalDirections;
 
     // DFS
-    private static int FindLongestPath(Dictionary<Vector2Int, List<Node>> graph, Vector2Int current, Vector2Int end, long seenBitMask = 1L)
+    private int FindLongestPath(Dictionary<Vector2Int, List<Node>> graph, Vector2Int current, long seenBitMask = 1L)
     {
-        if (current == end) return 0;
+        if (current == _end) return 0;
 
         int steps = int.MinValue;
 
@@ -105,7 +105,7 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
         {
             var nextBitMask = 1L << next.Index;
             if ((seenBitMask & nextBitMask) > 0) continue;
-            steps = Math.Max(steps, next.Steps + FindLongestPath(graph, next.Pos, end, seenBitMask | nextBitMask));
+            steps = Math.Max(steps, next.Steps + FindLongestPath(graph, next.Pos, seenBitMask | nextBitMask));
         }
 
         return steps;

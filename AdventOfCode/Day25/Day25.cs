@@ -19,15 +19,11 @@ public class Day25(ILogger logger, string path) : Puzzle(logger, path)
             string[] bNodes = split[1].Split(' ');
 
             connections[a] = bNodes;
-            
+
             if (!_nodes.Contains(a))
                 _nodes.Add(a);
 
-            foreach (var b in bNodes)
-            {
-                if (!_nodes.Contains(b))
-                    _nodes.Add(b);
-            }
+            _nodes.AddRange(bNodes.Where(b => !_nodes.Contains(b)));
         }
 
         // adjacencyMatrix[i,j] == 1 iff nodes i and j are connected (symmetric)
@@ -58,9 +54,20 @@ public class Day25(ILogger logger, string path) : Puzzle(logger, path)
 
     public override void SolvePart2() { } // Freebie
 
-    /// <summary>
-    /// Returns 0 if successful in increasing the flow, and otherwise the reachable component size.
-    /// </summary>
+    private (int Flow, int Product) MaxFlow(int start, int end)
+    {
+        int[,] flow = new int[_nodes.Count, _nodes.Count];
+        int flowVal = 0;
+        while (true)
+        {
+            var componentSize = FindPath(flow, start, end);
+            if (componentSize == 0) // augmenting path found
+                flowVal++;
+            else  // no more augmenting paths can be found
+                return (flowVal, componentSize * (_nodes.Count - componentSize));
+        }
+    }
+
     private int FindPath(int[,] flow, int start, int end)
     {
         int[] from = Enumerable.Repeat(-1, _nodes.Count).ToArray(); // Will store the in-neighbors, for reconstructing the augmenting path
@@ -73,13 +80,13 @@ public class Day25(ILogger logger, string path) : Puzzle(logger, path)
         {
             int curr = toSearch.Pop();
             steps++;
-            for (int j = 0; j < _nodes.Count; j++)
+            for (int i = 0; i < _nodes.Count; i++)
             {
                 // Key insight: if we can *decrease* flow going in opposite direction, that's also okay:
-                if (_adjacencyMatrix[curr, j] - flow[curr, j] > 0 && from[j] == -1)
+                if (_adjacencyMatrix[curr, i] - flow[curr, i] > 0 && from[i] == -1)
                 {
-                    from[j] = curr;
-                    toSearch.Push(j);
+                    from[i] = curr;
+                    toSearch.Push(i);
                 }
             }
         }
@@ -96,24 +103,6 @@ public class Day25(ILogger logger, string path) : Puzzle(logger, path)
             }
             return 0;
         }
-        else
-            return steps;
-    }
-
-    /// <summary>
-    /// Finds a maximum flow from [start] to [end], in an unweighted graph, by finding augmenting paths.
-    /// </summary>
-    private (int Flow, int Product) MaxFlow(int start, int end)
-    {
-        int[,] flow = new int[_nodes.Count, _nodes.Count];
-        int flowVal = 0;
-        while (true)
-        {
-            var compSize = FindPath(flow, start, end);
-            if (compSize == 0) // augmenting path found
-                flowVal++;
-            else  // no more augmenting paths can be found
-                return (flowVal, compSize * (_nodes.Count - compSize));
-        }
+        return steps;
     }
 }

@@ -70,9 +70,9 @@ public class Day24(ILogger logger, string path) : Puzzle(logger, path)
 
         var xIntercept = a.PosX + a.VelX * t;
         if (xIntercept < min || xIntercept > max) return false; // outside window
-        
+
         if (a.VelX > 0 != xIntercept > a.PosX || b.VelX > 0 != xIntercept > b.PosX) return false; // more reliable past check
-        
+
         var yIntercept = a.PosY + a.VelY * t;
         return yIntercept >= min && yIntercept <= max; // true if inside window
     }
