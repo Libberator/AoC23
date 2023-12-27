@@ -11,7 +11,7 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
     private string[] _grid = [];
     private Vector2Int _start, _end;
     private readonly List<Vector2Int> _nodes = [];
-    private record struct Node(Vector2Int Pos, int Steps);
+    private record struct Node(Vector2Int Pos, int Steps, int Index);
 
     public override void Setup()
     {
@@ -37,25 +37,24 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
     public override void SolvePart1()
     {
         var graph = CreateGraph(_nodes, DirectedGraphMapping);
-        var longestPath = FindLongestPath(graph, _start, []);
+        var longestPath = FindLongestPath(graph, _start, _end);
         _logger.Log(longestPath);
     }
 
     public override void SolvePart2()
     {
         var graph = CreateGraph(_nodes, UndirectedGraphMapping);
-        var longestPath = FindLongestPath(graph, _start, []);
+        var longestPath = FindLongestPath(graph, _start, _end);
         _logger.Log(longestPath);
     }
 
     private Dictionary<Vector2Int, List<Node>> CreateGraph(List<Vector2Int> nodes, Func<char, Vector2Int[]> nextDir)
     {
         Dictionary<Vector2Int, List<Node>> graph = [];
-
         foreach (var node in nodes)
         {
-            List<Node> connectedNodes = [];
             HashSet<Vector2Int> seen = [node];
+            List<Node> connectedNodes = graph[node] = [];
             Stack<(Vector2Int, int)> stack = [];
             stack.Push((node, 0));
 
@@ -63,9 +62,10 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
             {
                 var (pos, steps) = stack.Pop();
 
-                if (steps != 0 && nodes.Contains(pos))
+                if (nodes.Contains(pos) && steps != 0)
                 {
-                    connectedNodes.Add(new Node(pos, steps));
+                    var index = nodes.IndexOf(pos);
+                    connectedNodes.Add(new Node(pos, steps, index));
                     continue;
                 }
 
@@ -74,14 +74,11 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
                     var next = pos + dir;
                     if (next.X < 0 || next.Y < 0 || next.X >= _grid.Length || next.Y >= _grid[0].Length) continue;
                     if (_grid[next.X][next.Y] == FOREST) continue;
-                    if (seen.Contains(next)) continue;
+                    if (!seen.Add(next)) continue;
                     stack.Push((next, steps + 1));
-                    seen.Add(next);
                 }
             }
-            graph[node] = connectedNodes;
         }
-
         return graph;
     }
 
@@ -98,19 +95,18 @@ public class Day23(ILogger logger, string path) : Puzzle(logger, path)
     private static Vector2Int[] UndirectedGraphMapping(char _) => Vector2Int.CardinalDirections;
 
     // DFS
-    private int FindLongestPath(Dictionary<Vector2Int, List<Node>> graph, Vector2Int current, HashSet<Vector2Int> seen)
+    private static int FindLongestPath(Dictionary<Vector2Int, List<Node>> graph, Vector2Int current, Vector2Int end, long seenBitMask = 1L)
     {
-        if (current == _end) return 0;
+        if (current == end) return 0;
 
         int steps = int.MinValue;
 
-        seen.Add(current);
         foreach (var next in graph[current])
         {
-            if (seen.Contains(next.Pos)) continue;
-            steps = Math.Max(steps, FindLongestPath(graph, next.Pos, seen) + next.Steps);
+            var nextBitMask = 1L << next.Index;
+            if ((seenBitMask & nextBitMask) > 0) continue;
+            steps = Math.Max(steps, next.Steps + FindLongestPath(graph, next.Pos, end, seenBitMask | nextBitMask));
         }
-        seen.Remove(current);
 
         return steps;
     }
